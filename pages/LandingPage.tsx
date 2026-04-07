@@ -1,0 +1,180 @@
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useApp } from '../context/AppContext';
+import { Role } from '../types';
+import { 
+  AlertCircle,
+  RefreshCw,
+  MapPin,
+  Mail,
+  Phone,
+  ShieldCheck
+} from 'lucide-react';
+
+const Footer = () => (
+  <footer className="bg-[#1e419c] text-white py-6 px-6 sm:px-12 absolute bottom-0 left-0 right-0 z-50 border-t-[10px] border-[#fbcaca]">
+    <div className="max-w-[1600px] mx-auto flex flex-col xl:flex-row items-center justify-center gap-x-8 gap-y-4 w-full text-sm font-normal">
+      <div className="flex items-center gap-4 whitespace-nowrap">
+        <img 
+          src="https://dev2.phoenix.com.ph/wp-content/uploads/2025/12/Seal_of_San_Juan_Metro_Manila.png" 
+          alt="Official Seal" 
+          className="h-12 w-auto drop-shadow-md"
+        />
+        <p className="uppercase tracking-tight">Dakilang Lungsod ng San Juan</p>
+      </div>
+
+      <div className="hidden xl:block w-px h-4 bg-white/20"></div>
+
+      <div className="flex flex-wrap justify-center items-center gap-x-8 gap-y-3">
+        <div className="flex items-center gap-2 group cursor-pointer whitespace-nowrap">
+          <MapPin size={16} className="text-white shrink-0" />
+          <span className="underline decoration-white/30 underline-offset-4 group-hover:decoration-white transition-colors">Pinaglabanan, San Juan City, Metro Manila</span>
+        </div>
+        <div className="flex items-center gap-2 group cursor-pointer whitespace-nowrap">
+          <Mail size={16} className="text-white shrink-0" />
+          <span className="underline decoration-white/30 underline-offset-4 group-hover:decoration-white transition-colors">publicinfo@sanjuancity.gov.ph</span>
+        </div>
+        <div className="flex items-center gap-2 group cursor-pointer whitespace-nowrap">
+          <Phone size={16} className="text-white shrink-0" />
+          <span className="underline decoration-white/30 underline-offset-4 group-hover:decoration-white transition-colors">(02) 7729 0005</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+);
+
+export const LandingPage: React.FC = () => {
+  const { login } = useApp();
+  const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    
+    try {
+      const user = await login(username, password);
+      if (user) {
+        if (user.role === Role.CITIZEN) {
+          navigate('/citizen/dashboard');
+        } else {
+          navigate('/admin/dashboard');
+        }
+      } else {
+        setError('Maling username o password.');
+      }
+    } catch (err) {
+      setError('May error sa pag-login. Pakisubukang muli.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div 
+      className="min-h-screen w-full flex flex-col bg-cover bg-center relative font-sans overflow-hidden"
+      style={{
+        backgroundImage: "url('https://www.phoenix.com.ph/wp-content/uploads/2026/03/image-16.png')"
+      }}
+    >
+      <div className="absolute inset-0 bg-white/75"></div>
+
+      <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col lg:flex-row items-center justify-between px-6 sm:px-12 relative z-10 pt-12 pb-24 lg:pb-48">
+        
+        {/* Left Side: Content */}
+        <div className="w-full lg:w-1/2 space-y-6 animate-fade-in-up mt-8">
+           <div className="flex gap-3">
+              <img 
+                src="https://www.phoenix.com.ph/wp-content/uploads/2026/04/sanjuanlogo.png" 
+                alt="Logos" 
+                className="h-16 md:h-20 w-auto object-contain"
+              />
+           </div>
+           
+           <div className="space-y-4 max-w-xl">
+              <h1 className="text-[24px] font-semibold text-osca_red uppercase tracking-tight leading-tight whitespace-nowrap">
+                 PWD Care & Support System
+              </h1>
+              
+              <div className="space-y-6 text-slate-600 font-normal text-base lg:text-lg leading-relaxed pt-2">
+                <p>Masaya kaming makita ka ulit 💙</p>
+                <p className="max-w-md">Mag-log in para ma-access ang mga serbisyo, updates, at support na ginawa para sa'yo.</p>
+                <p className="max-w-lg">Narito kami para gawing mas madali, ligtas, at accessible ang bawat hakbang—dahil mahalaga ka.</p>
+                <p className="font-bold text-slate-800 italic pt-4 text-lg tracking-tight">Mag-sign in na at sabay tayong magpatuloy.</p>
+              </div>
+           </div>
+        </div>
+
+        {/* Right Side: Login Card */}
+        <div className="w-full lg:w-auto flex justify-end mt-12 lg:mt-0 animate-scale-up">
+          <div className="bg-white rounded-xl shadow-[0_50px_100px_-20px_rgba(0,0,0,0.2),0_20px_40px_-10px_rgba(0,0,0,0.1)] overflow-hidden border border-slate-100/50 w-full lg:w-[480px]">
+            <div className="p-10 lg:p-16">
+               <h2 className="text-4xl lg:text-5xl font-medium text-center text-osca_red mb-12">Mag-log in</h2>
+               
+               <form onSubmit={handleSubmit} className="space-y-8">
+                  {error && (
+                    <div className="bg-red-50 text-red-600 px-4 py-3 rounded-md flex items-center gap-2 text-xs font-medium animate-pulse">
+                      <AlertCircle size={18} />
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                     <label className="text-[#1e419c] font-semibold text-lg ml-1">Username</label>
+                     <input 
+                       type="text" 
+                       value={username}
+                       onChange={(e) => setUsername(e.target.value)}
+                       disabled={loading}
+                       className="w-full border-b border-slate-200 px-1 py-1.5 focus:outline-none focus:border-[#1e419c] transition-colors bg-transparent placeholder:text-slate-300 text-slate-700 text-lg"
+                       placeholder="ilagay ang iyong username"
+                     />
+                  </div>
+
+                  <div className="space-y-1 relative">
+                     <label className="text-[#1e419c] font-semibold text-lg ml-1">Password</label>
+                     <input 
+                       type="password" 
+                       value={password}
+                       onChange={(e) => setPassword(e.target.value)}
+                       disabled={loading}
+                       className="w-full border-b border-slate-200 px-1 py-1.5 focus:outline-none focus:border-[#1e419c] transition-colors bg-transparent placeholder:text-slate-300 text-slate-700 text-lg"
+                       placeholder="ilagay ang iyong password"
+                     />
+                     <div className="flex justify-end pr-1 mt-2">
+                        <button type="button" className="text-[10px] text-slate-400 hover:text-slate-600 italic">
+                          Nakalimutan ang password?
+                        </button>
+                     </div>
+                  </div>
+
+                  <div className="pt-6">
+                    <button 
+                      type="submit"
+                      disabled={loading}
+                      className="w-full bg-[#1e419c] text-white rounded-md py-4 font-semibold text-xl hover:bg-[#15327a] transition-all shadow-xl shadow-[#1e419c]/10 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
+                    >
+                      {loading && <RefreshCw size={20} className="animate-spin" />}
+                      Log in
+                    </button>
+                  </div>
+
+                  <div className="text-center text-sm text-slate-400 mt-10">
+                     Wala ka pang account? <button type="button" onClick={() => navigate('/register')} className="text-osca_red font-bold underline ml-1 hover:text-red-700 transition-colors">Mag-rehistro dito</button>
+                  </div>
+               </form>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <Footer />
+    </div>
+  );
+};

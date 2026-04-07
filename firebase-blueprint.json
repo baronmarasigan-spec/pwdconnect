@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "A user of the system (Citizen or Admin).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The Firebase Auth UID." },
+        "name": { "type": "string", "description": "Full name." },
+        "email": { "type": "string", "format": "email", "description": "Email address." },
+        "role": { "type": "string", "enum": ["CITIZEN", "ADMIN", "SUPER_ADMIN", "ENCODER", "APPROVER"], "description": "User role." },
+        "pwdIdNumber": { "type": "string", "description": "PWD ID Number if applicable." },
+        "address": { "type": "string" },
+        "contactNumber": { "type": "string" },
+        "birthDate": { "type": "string", "format": "date" },
+        "disabilityType": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email", "role"]
+    },
+    "Application": {
+      "title": "Service Application",
+      "description": "An application for registration, ID, or benefits.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID of the applicant." },
+        "userName": { "type": "string" },
+        "type": { "type": "string", "enum": ["Registration", "New PWD ID", "PWD ID Renewal", "PWD ID Replacement", "Cash Grant"] },
+        "status": { "type": "string", "enum": ["Pending", "Approved", "Rejected", "Issued", "For Clarification"] },
+        "date": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" },
+        "rejectionReason": { "type": "string" },
+        "appointmentDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "status", "date"]
+    },
+    "Complaint": {
+      "title": "Citizen Complaint",
+      "description": "A feedback or complaint submitted by a citizen.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "subject": { "type": "string" },
+        "details": { "type": "string" },
+        "status": { "type": "string", "enum": ["Open", "Resolved"] },
+        "date": { "type": "string", "format": "date-time" },
+        "adminResponse": { "type": "string" }
+      },
+      "required": ["userId", "subject", "details", "status", "date"]
+    },
+    "RegistryRecord": {
+      "title": "LCR/PWD Registry Record",
+      "description": "A record from the Local Civil Registry or PWD registry.",
+      "type": "object",
+      "properties": {
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "birthDate": { "type": "string", "format": "date" },
+        "isRegistered": { "type": "boolean" },
+        "type": { "type": "string", "enum": ["LCR", "PWD"] }
+      },
+      "required": ["firstName", "lastName", "birthDate", "type"]
+    },
+    "Event": {
+      "title": "LGU Event",
+      "description": "An official LGU announcement or activity.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "image": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "date", "image"]
+    },
+    "Poster": {
+      "title": "Community Poster",
+      "description": "A poster for the community gallery.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "image": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "image"]
+    }
+  },
+  "firestore": {
+    "users": { "schema": "User", "description": "User profiles." },
+    "applications": { "schema": "Application", "description": "Service applications." },
+    "complaints": { "schema": "Complaint", "description": "Citizen complaints." },
+    "registry": { "schema": "RegistryRecord", "description": "Registry masterlist." },
+    "events": { "schema": "Event", "description": "LGU events." },
+    "posters": { "schema": "Poster", "description": "Community posters." }
+  }
+}

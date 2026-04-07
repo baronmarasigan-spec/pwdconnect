@@ -1,0 +1,8 @@
+{
+  "name": "Remix: PWD Management System - San Juan City (Updated)",
+  "description": "A robust system for managing Persons with Disabilities (PWDs), facilitating digital ID issuance, welfare benefit coordination, and registry management.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
