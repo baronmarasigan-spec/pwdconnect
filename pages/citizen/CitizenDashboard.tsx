@@ -52,30 +52,20 @@ export const CitizenDashboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const combinedEvents = React.useMemo(() => {
-    const posterEvents = posters
-      .filter(p => p.date)
-      .map(p => ({
-        id: p.id,
-        title: p.title,
-        date: p.date!,
-        image: p.image,
-        createdAt: p.createdAt
-      }));
-    
-    const all = [...events, ...posterEvents];
+    const all = [...events];
     return all.sort((a, b) => {
       const dateA = new Date(a.date).getTime() || 0;
       const dateB = new Date(b.date).getTime() || 0;
       return dateB - dateA;
     }).slice(0, 10);
-  }, [events, posters]);
+  }, [events]);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     try {
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return dateStr;
-      return date.toLocaleDateString('tl-PH', { month: 'long', day: 'numeric', year: 'numeric' });
+      return date.toLocaleDateString(language === Language.EN ? 'en-US' : 'tl-PH', { month: 'long', day: 'numeric', year: 'numeric' });
     } catch {
       return dateStr;
     }
@@ -85,7 +75,7 @@ export const CitizenDashboard: React.FC = () => {
     try {
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return dateStr.split(' ')[0].substring(0, 3);
-      return date.toLocaleDateString('tl-PH', { month: 'short' }).substring(0, 3);
+      return date.toLocaleDateString(language === Language.EN ? 'en-US' : 'tl-PH', { month: 'short' }).substring(0, 3);
     } catch {
       return '---';
     }
@@ -109,19 +99,19 @@ export const CitizenDashboard: React.FC = () => {
       color: 'bg-blue-50 border-blue-100'
     },
     { 
-      label: 'Benepisyo', 
+      label: 'Benefits', 
       image: 'https://www.phoenix.com.ph/wp-content/uploads/2026/03/Group-262.png',
       path: '/citizen/benefits', 
       color: 'bg-emerald-50 border-emerald-100'
     },
     { 
-      label: 'Serbisyo sa ID', 
+      label: 'ID Services', 
       image: 'https://www.phoenix.com.ph/wp-content/uploads/2026/03/Group-263.png',
       path: '/citizen/id', 
       color: 'bg-indigo-50 border-indigo-100'
     },
     { 
-      label: 'Mga Reklamo', 
+      label: 'Complaints', 
       image: 'https://www.phoenix.com.ph/wp-content/uploads/2026/03/Group-264.png',
       path: '/citizen/complaints', 
       color: 'bg-rose-50 border-rose-100'
@@ -130,20 +120,20 @@ export const CitizenDashboard: React.FC = () => {
 
   const ads = [
     {
-      title: 'Araw ng Lokal na Pamilihan',
-      description: 'Suportahan ang ating mga lokal na tindero ngayong Sabado sa City Plaza.',
+      title: 'Local Market Day',
+      description: 'Support our local vendors this Saturday at the City Plaza.',
       image: 'https://picsum.photos/seed/market/600/400',
       link: '#'
     },
     {
-      title: 'Seminar para sa Kalusugan at Kaayusan',
-      description: 'Sumali sa aming libreng seminar tungkol sa kalusugan at nutrisyon ng mga senior.',
+      title: 'Health and Wellness Seminar',
+      description: 'Join our free seminar on health and nutrition for seniors.',
       image: 'https://picsum.photos/seed/health/600/400',
       link: '#'
     },
     {
-      title: 'Tour sa Pamana ng San Juan',
-      description: 'Galugarin ang mayamang kasaysayan ng ating lungsod sa pamamagitan ng guided tour.',
+      title: 'San Juan Heritage Tour',
+      description: 'Explore the rich history of our city through a guided tour.',
       image: 'https://picsum.photos/seed/heritage/600/400',
       link: '#'
     }
@@ -176,7 +166,7 @@ export const CitizenDashboard: React.FC = () => {
       >
         <div className="space-y-2 text-left">
           <h1 className="text-[#1e419c] text-3xl font-normal tracking-tight">
-            Maligayang pagdating, {currentUser?.firstName || currentUser?.name?.split(' ')[0]}!
+            {language === Language.EN ? 'Welcome' : 'Maligayang pagdating'}, {currentUser?.firstName || currentUser?.name?.split(' ')[0]}!
           </h1>
           <div className="flex items-center gap-2">
             <Accessibility size={24} className="text-red-500" />
@@ -224,12 +214,14 @@ export const CitizenDashboard: React.FC = () => {
               </div>
               <div>
                 <h3 className="font-bold text-lg leading-tight">
-                  {idApplication ? 'Kasalukuyang pinoproseso ang iyong ID' : 'Wala ka pang opisyal na PWD ID'}
+                  {idApplication 
+                    ? 'Your ID is currently being processed' 
+                    : 'You do not have an official PWD ID yet'}
                 </h3>
                 <p className="text-sm opacity-80 mt-1">
                   {idApplication 
-                    ? `Ang iyong aplikasyon noong ${idApplication.date} ay sinusuri na ng aming admin.` 
-                    : 'Mag-apply na para makuha ang iyong ID at ma-access ang lahat ng benepisyo.'}
+                    ? `Your application from ${idApplication.date} is being reviewed by our admin.` 
+                    : 'Apply now to get your ID and access all benefits.'}
                 </p>
               </div>
             </div>
@@ -238,7 +230,7 @@ export const CitizenDashboard: React.FC = () => {
                 onClick={() => navigate('/citizen/id')}
                 className="px-8 py-3 bg-amber-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-amber-700 transition-all shadow-lg shadow-amber-600/20"
               >
-                Mag-apply para sa ID
+                Apply for ID
               </button>
             )}
           </div>
@@ -252,7 +244,9 @@ export const CitizenDashboard: React.FC = () => {
         transition={{ delay: 0.2 }}
         className="w-full px-6 md:px-12 lg:px-16 mb-16"
       >
-        <h2 className="text-[#1e419c] text-3xl font-semibold tracking-tight mb-8 text-left">Serbisyo</h2>
+        <h2 className="text-[#1e419c] text-3xl font-semibold tracking-tight mb-8 text-left">
+          Services
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {menuItems.map((item, index) => (
             <motion.button 
@@ -283,76 +277,50 @@ export const CitizenDashboard: React.FC = () => {
             <div className="flex items-end justify-between mb-10 border-b border-slate-100 pb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-[#1e419c] text-3xl font-semibold tracking-tight">Mga Kaganapan</h2>
+                  <h2 className="text-[#1e419c] text-3xl font-semibold tracking-tight">
+                    Events
+                  </h2>
                   <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 border border-emerald-100 rounded-full">
                     <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
                     <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Live</span>
                   </div>
                 </div>
-                <p className="text-slate-400 text-xs mt-1">Mga larawan ng mga nakaraang kaganapan at opisyal na anunsyo ng LGU</p>
+                <p className="text-slate-400 text-xs mt-1">
+                  Official announcements and activities from the LGU
+                </p>
               </div>
             </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-stretch">
+        <div className="w-full">
           
-          {/* Left Column: Event Gallery (4-Grid Layout) */}
-          <div className="lg:col-span-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-              {posters.length > 0 ? (
-                posters.map((poster, index) => (
-                  <motion.div 
-                    key={poster.id} 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.4 + (index * 0.1) }}
-                    whileHover={{ y: -5 }}
-                    className="bg-white rounded-3xl overflow-hidden shadow-lg border border-slate-100 hover:shadow-xl transition-all group relative aspect-[4/3]"
-                  >
-                    <img 
-                      src={poster.image} 
-                      alt={poster.title} 
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="absolute bottom-0 left-0 p-6 w-full transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 opacity-0 group-hover:opacity-100">
-                      <h3 className="text-white font-bold text-base leading-tight mb-1">{poster.title}</h3>
-                    </div>
-                  </motion.div>
-                ))
-              ) : (
-                <div className="col-span-full flex flex-col items-center justify-center p-12 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400">
-                  <ImageIcon size={48} className="mb-4 opacity-20" />
-                  <p className="text-sm font-bold uppercase tracking-widest">Walang Poster na Ipinapakita</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column: LGU Calendar & Announcements (Smaller) */}
-          <div className="lg:col-span-4">
+          {/* LGU Calendar & Announcements (Full Width) */}
+          <div className="w-full">
             <motion.div 
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.5 }}
-              className="bg-[#1e419c] rounded-3xl p-8 shadow-2xl h-full flex flex-col text-white relative overflow-hidden"
+              className="bg-[#1e419c] rounded-[2.5rem] p-10 md:p-16 shadow-2xl flex flex-col text-white relative overflow-hidden"
             >
               {/* Decorative Background Icon */}
-              <CalendarIcon size={120} className="absolute -bottom-10 -right-10 text-white/5 rotate-12" />
+              <CalendarIcon size={200} className="absolute -bottom-20 -right-20 text-white/5 rotate-12" />
               
-              <div className="flex items-center justify-between mb-8 relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center">
-                    <CalendarIcon size={20} className="text-red-400" />
+              <div className="flex items-center justify-between mb-12 relative z-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center">
+                    <CalendarIcon size={28} className="text-red-400" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm uppercase tracking-widest">Petsa ng Anunsyo at Aktibidad</h3>
-                    <p className="text-white/50 text-[10px]">Mga Opisyal na Anunsyo</p>
+                    <h3 className="font-bold text-xl uppercase tracking-widest">
+                      Announcement & Activity Dates
+                    </h3>
+                    <p className="text-white/50 text-xs mt-1">
+                      Official Announcements from the LGU
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-6 relative z-10 flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 relative z-10">
                 {combinedEvents.length > 0 ? (
                   combinedEvents.map((event, index) => (
                     <motion.div 
@@ -362,23 +330,24 @@ export const CitizenDashboard: React.FC = () => {
                       transition={{ delay: 0.6 + (index * 0.1) }}
                       className="group cursor-pointer"
                     >
-                      <div className="flex gap-4">
-                        <div className="flex flex-col items-center justify-center w-12 h-12 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/10 shrink-0 group-hover:bg-red-500 group-hover:border-red-400 transition-all duration-300">
-                          <span className="text-[10px] font-black uppercase leading-none mb-0.5">{getMonthShort(event.date)}</span>
-                          <span className="text-lg font-bold leading-none">{getDay(event.date)}</span>
+                      <div className="flex gap-6">
+                        <div className="flex flex-col items-center justify-center w-16 h-16 bg-white/10 backdrop-blur-sm rounded-3xl border border-white/10 shrink-0 group-hover:bg-red-500 group-hover:border-red-400 transition-all duration-300">
+                          <span className="text-xs font-black uppercase leading-none mb-1">{getMonthShort(event.date)}</span>
+                          <span className="text-2xl font-bold leading-none">{getDay(event.date)}</span>
                         </div>
                         <div className="flex flex-col justify-center">
-                          <h4 className="font-bold text-sm leading-tight group-hover:text-red-400 transition-colors line-clamp-2">{event.title}</h4>
-                          <p className="text-white/40 text-[10px] mt-1 font-medium">{formatDate(event.date)}</p>
+                          <h4 className="font-bold text-lg leading-tight group-hover:text-red-400 transition-colors line-clamp-2">{event.title}</h4>
+                          <p className="text-white/40 text-xs mt-1.5 font-medium">{formatDate(event.date)}</p>
                         </div>
                       </div>
-                      {index < combinedEvents.length - 1 && <div className="h-px bg-white/5 w-full mt-6"></div>}
                     </motion.div>
                   ))
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-white/20">
-                    <CalendarIcon size={48} className="mb-4" />
-                    <p className="text-xs font-bold uppercase tracking-widest">Walang Kaganapan</p>
+                  <div className="col-span-full flex flex-col items-center justify-center py-20 text-white/20">
+                    <CalendarIcon size={64} className="mb-4" />
+                    <p className="text-sm font-bold uppercase tracking-widest">
+                      No Activities Listed
+                    </p>
                   </div>
                 )}
               </div>

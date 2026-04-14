@@ -32,6 +32,30 @@ const METRO_MANILA_LOCATIONS: Record<string, { districts: string[], barangays: R
   }
 };
 
+const DISABILITY_TYPES = [
+  "Deaf or Hard of Hearing",
+  "Intellectual Disability",
+  "Learning Disability",
+  "Mental Disability",
+  "Physical Disability (Orthopedic)",
+  "Psychosocial Disability",
+  "Speech and Language Impairment",
+  "Visual Disability",
+  "Cancer (RA11215)",
+  "Rare Disease (RA10747)"
+];
+
+const DISABILITY_CAUSES = [
+  {
+    label: "Congenital / Inborn",
+    subOptions: ["Autism", "ADHD", "Cerebral Palsy", "Down Syndrome"]
+  },
+  {
+    label: "Acquired",
+    subOptions: ["Chronic Illness", "Cerebral Palsy", "Injury"]
+  }
+];
+
 export const Register: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -41,15 +65,14 @@ export const Register: React.FC = () => {
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [selectedGovIdTypes, setSelectedGovIdTypes] = useState<string[]>([]);
 
   const queryParams = new URLSearchParams(location.search);
   const isWalkIn = queryParams.get('isWalkIn') === 'true';
 
   const [formData, setFormData] = useState({
     // Personal Information
-    controlNo: '',
     dateApplied: new Date().toISOString().split('T')[0],
-    officeUnit: '',
     firstName: '',
     middleName: '',
     lastName: '',
@@ -104,6 +127,10 @@ export const Register: React.FC = () => {
     motherName: '',
     guardianName: '',
 
+    // Certifying Physician
+    physicianName: '',
+    physicianLicense: '',
+
     // Security
     username: '',
     password: '',
@@ -116,13 +143,9 @@ export const Register: React.FC = () => {
     email: '', // Will sync with emailAddress
   });
 
-  const [files, setFiles] = useState<string[]>([]);
-
-  useEffect(() => {
-    // Auto-generate control number on mount
-    const nextId = getNextPwdIdNumber();
-    setFormData(prev => ({ ...prev, controlNo: nextId }));
-  }, [getNextPwdIdNumber]);
+  const [disabilityCert, setDisabilityCert] = useState<string | null>(null);
+  const [residencyCert, setResidencyCert] = useState<string | null>(null);
+  const [govIdFile, setGovIdFile] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -152,23 +175,35 @@ export const Register: React.FC = () => {
     }
   };
 
+  const handleCheckboxChange = (name: string, value: string, checked: boolean) => {
+    setFormData(prev => {
+      const currentValues = (prev[name as keyof typeof prev] as string).split(', ').filter(v => v !== '');
+      let nextValues;
+      if (checked) {
+        nextValues = [...currentValues, value];
+      } else {
+        nextValues = currentValues.filter(v => v !== value);
+      }
+      const nextString = nextValues.join(', ');
+      const next = { ...prev, [name]: nextString };
+      
+      // Sync legacy fields
+      if (name === 'typeOfDisability') next.disabilityType = nextString;
+      
+      return next;
+    });
+
+    if (errors.includes(name)) {
+      setErrors(prev => prev.filter(err => err !== name));
+    }
+  };
+
   const getFieldClass = (name: string, isRequired: boolean) => {
-    const base = "w-full bg-white border rounded-md px-4 py-3 text-sm text-slate-900 font-medium uppercase focus:border-[#1e419c] outline-none transition-all";
+    const base = "w-full bg-white border rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none transition-all";
     if (errors.includes(name)) {
       return `${base} border-red-500 ring-1 ring-red-100 bg-red-50/10`;
     }
     return `${base} border-slate-200`;
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files).map((f: File) => f.name);
-      setFiles(prev => [...prev, ...newFiles]);
-    }
-  };
-
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const nextStep = () => {
@@ -179,10 +214,11 @@ export const Register: React.FC = () => {
         if (!formData.birthDate) newErrors.push('birthDate');
         if (!formData.gender) newErrors.push('gender');
         if (!formData.typeOfDisability) newErrors.push('typeOfDisability');
+        if (!formData.causeOfDisability) newErrors.push('causeOfDisability');
         
         if (newErrors.length > 0) {
             setErrors(newErrors);
-            setError('Pakisagutan ang lahat ng mandatory fields (*)');
+            setError('Please fill out all mandatory fields (*)');
             return;
         }
     }
@@ -193,7 +229,7 @@ export const Register: React.FC = () => {
 
         if (newErrors.length > 0) {
             setErrors(newErrors);
-            setError('Pakisagutan ang lahat ng mandatory fields (*)');
+            setError('Please fill out all mandatory fields (*)');
             return;
         }
     }
@@ -203,7 +239,7 @@ export const Register: React.FC = () => {
 
         if (newErrors.length > 0) {
             setErrors(newErrors);
-            setError('Pakisagutan ang lahat ng mandatory fields (*)');
+            setError('Please fill out all mandatory fields (*)');
             return;
         }
     }
@@ -214,12 +250,24 @@ export const Register: React.FC = () => {
 
         if (newErrors.length > 0) {
             setErrors(newErrors);
-            setError('Pakisagutan ang lahat ng mandatory fields (*)');
+            setError('Please fill out all mandatory fields (*)');
             return;
         }
         if (formData.password !== formData.confirmPassword) {
-            setError('Hindi magkatugma ang password.');
+            setError('Passwords do not match.');
             setErrors(['password', 'confirmPassword']);
+            return;
+        }
+    }
+    if (step === 5) {
+        if (!disabilityCert) newErrors.push('disabilityCert');
+        if (!residencyCert) newErrors.push('residencyCert');
+        if (!govIdFile) newErrors.push('govIdFile');
+        if (selectedGovIdTypes.length === 0) newErrors.push('selectedGovIdTypes');
+
+        if (newErrors.length > 0) {
+            setErrors(newErrors);
+            setError('Please upload all required documents');
             return;
         }
     }
@@ -236,6 +284,7 @@ export const Register: React.FC = () => {
     setError('');
 
     try {
+      const allFiles = [disabilityCert, residencyCert, govIdFile].filter(Boolean) as string[];
       const result = await addApplication({
         userId: `new_${Date.now()}`,
         userName: `${formData.firstName} ${formData.lastName}`,
@@ -247,17 +296,17 @@ export const Register: React.FC = () => {
           isWalkIn: isWalkIn
         },
         appointmentDate: formData.appointmentDate,
-        documents: files
+        documents: allFiles
       });
 
       if (result.ok) {
         await notifyRegistrationSuccess(formData.firstName, formData.contactNumber, formData.email);
         setStep(6);
       } else {
-        setError(result.error || 'May error sa pag-rehistro. Pakisubukang muli.');
+        setError(result.error || 'Registration error. Please try again.');
       }
     } catch (err) {
-      setError('System error. Pakisubukang muli mamaya.');
+      setError('System error. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -271,14 +320,14 @@ export const Register: React.FC = () => {
              <CheckCircle2 size={48} />
            </div>
            <div className="space-y-4">
-             <h2 className="text-[32px] font-normal text-slate-900 tracking-tight uppercase">Salamat sa Pag-rehistro!</h2>
+             <h2 className="text-[32px] font-normal text-slate-900 tracking-tight uppercase">Thank you for Registering!</h2>
              <p className="text-slate-600 text-lg leading-relaxed font-normal">
-               Ang iyong aplikasyon para sa PWD ID ay natanggap na namin. Ang aming team sa PDAO ay susuriin ang iyong mga dokumento.
+               We have received your application for a PWD ID. Our PDAO team will review your documents.
              </p>
              <div className="bg-slate-50 p-6 rounded-lg border border-slate-100 flex items-start gap-4 text-left font-normal">
                 <Info size={24} className="text-primary-500 shrink-0" />
                 <p className="text-sm text-slate-600 font-normal">
-                   Makakatanggap ka ng SMS o Email notification kapag aprobado na ang iyong application. Maaari mo ring bisitahin ang San Juan City Hall para sa karagdagang verification.
+                   You will receive an SMS or Email notification once your application is approved. You may also visit San Juan City Hall for further verification.
                 </p>
              </div>
            </div>
@@ -286,7 +335,7 @@ export const Register: React.FC = () => {
              onClick={() => navigate('/')}
              className="w-full bg-[#1e419c] text-white py-5 rounded-lg font-semibold text-lg uppercase tracking-widest shadow-xl hover:opacity-90 transition-all active:scale-95"
            >
-             Bumalik sa Login
+             Back to Login
            </button>
         </div>
       </div>
@@ -314,9 +363,9 @@ export const Register: React.FC = () => {
               <h1 className="text-2xl font-black uppercase tracking-widest leading-none">San Juan City <br/><span className="text-primary-300 font-normal">PWD Connect</span></h1>
            </div>
            <div className="space-y-4">
-              <h2 className="text-5xl font-light leading-tight tracking-tight">Kaisa ka namin sa <br/><span className="font-normal text-white">pag-unlad.</span></h2>
+              <h2 className="text-5xl font-light leading-tight tracking-tight">We are with you in <br/><span className="font-normal text-white">progress.</span></h2>
               <p className="text-white/70 text-lg font-light leading-relaxed max-w-md">
-                Ang programang ito ay naglalayong magbigay ng mas mabilis na serbisyo at suporta para sa ating mga Persons with Disabilities sa San Juan.
+                This program aims to provide faster service and support for our Persons with Disabilities in San Juan.
               </p>
            </div>
         </div>
@@ -326,7 +375,7 @@ export const Register: React.FC = () => {
               <ShieldCheck size={32} className="text-primary-300" />
               <div>
                 <p className="text-xs font-semibold uppercase tracking-widest opacity-60">Data Privacy Guaranteed</p>
-                <p className="text-sm">Ang iyong impormasyon ay ligtas sa ilalim ng Data Privacy Act of 2012.</p>
+                <p className="text-sm">Your information is safe under the Data Privacy Act of 2012.</p>
               </div>
            </div>
         </div>
@@ -338,11 +387,11 @@ export const Register: React.FC = () => {
             onClick={() => navigate('/')}
             className="flex items-center gap-2 text-slate-400 hover:text-[#1e419c] transition-colors font-semibold uppercase text-xs tracking-widest"
           >
-            <ArrowLeft size={16} /> Bumalik sa Home
+            <ArrowLeft size={16} /> Back to Home
           </button>
 
           <header className="space-y-2">
-            <h2 className="text-[32px] font-normal text-slate-900 tracking-tight">Pagpaparehistro</h2>
+            <h2 className="text-[32px] font-normal text-slate-900 tracking-tight">Registration</h2>
             <div className="flex items-center gap-4">
               <div className="flex gap-1">
                 {[1, 2, 3, 4, 5].map(s => (
@@ -366,17 +415,9 @@ export const Register: React.FC = () => {
                   <h3 className="text-xs font-bold text-[#1e419c] uppercase tracking-wider">Personal Information</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Control No.</label>
-                    <input name="controlNo" value={formData.controlNo} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-500 font-medium uppercase outline-none cursor-not-allowed" readOnly placeholder="GGG-13-7405-00-000" />
-                  </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 md:col-span-2">
                     <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Date Applied</label>
                     <input type="date" name="dateApplied" value={formData.dateApplied} onChange={handleInputChange} className={getFieldClass('dateApplied', false)} />
-                  </div>
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Office / Unit</label>
-                    <input name="officeUnit" value={formData.officeUnit} onChange={handleInputChange} className={getFieldClass('officeUnit', false)} />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">First Name <span className="text-red-500">*</span></label>
@@ -402,8 +443,8 @@ export const Register: React.FC = () => {
                     <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Gender <span className="text-red-500">*</span></label>
                     <select name="gender" value={formData.gender} onChange={handleInputChange} className={getFieldClass('gender', true)} required>
                       <option value="">Select</option>
-                      <option value="Male">Lalaki (Male)</option>
-                      <option value="Female">Babae (Female)</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
                     </select>
                   </div>
                   <div className="space-y-1.5 md:col-span-2">
@@ -421,21 +462,68 @@ export const Register: React.FC = () => {
                 <div className="bg-slate-50 p-4 rounded-md border-l-4 border-[#1e419c]">
                   <h3 className="text-xs font-bold text-[#1e419c] uppercase tracking-wider">Disability Information</h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Type of Disability <span className="text-red-500">*</span></label>
-                    <input 
-                      name="typeOfDisability" 
-                      value={formData.typeOfDisability} 
-                      onChange={handleInputChange} 
-                      className={getFieldClass('typeOfDisability', true)} 
-                      placeholder="Enter Type of Disability"
-                      required 
-                    />
+                <div className="space-y-6">
+                  <div className={`space-y-3 p-4 rounded-xl transition-all ${errors.includes('typeOfDisability') ? 'bg-red-50 ring-1 ring-red-200' : ''}`}>
+                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1 block">Type of Disability <span className="text-red-500">*</span></label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {DISABILITY_TYPES.map(type => (
+                        <label key={type} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${formData.typeOfDisability.includes(type) ? 'bg-blue-50 border-[#1e419c]' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+                          <input 
+                            type="checkbox" 
+                            className="w-4 h-4 rounded border-slate-300 text-[#1e419c] focus:ring-[#1e419c]"
+                            checked={formData.typeOfDisability.includes(type)}
+                            onChange={(e) => handleCheckboxChange('typeOfDisability', type, e.target.checked)}
+                          />
+                          <span className="text-xs text-slate-700 font-medium">{type}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className={`space-y-3 p-4 rounded-xl transition-all ${errors.includes('causeOfDisability') ? 'bg-red-50 ring-1 ring-red-200' : ''}`}>
+                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1 block">9. Cause of Disability <span className="text-red-500">*</span></label>
+                    <div className="space-y-4">
+                      {DISABILITY_CAUSES.map(cause => (
+                        <div key={cause.label} className="space-y-2">
+                          <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${formData.causeOfDisability.includes(cause.label) ? 'bg-blue-50 border-[#1e419c]' : 'bg-slate-100 border-slate-200 hover:bg-slate-200'}`}>
+                            <input 
+                              type="checkbox" 
+                              className="w-4 h-4 rounded border-slate-300 text-[#1e419c] focus:ring-[#1e419c]"
+                              checked={formData.causeOfDisability.includes(cause.label)}
+                              onChange={(e) => handleCheckboxChange('causeOfDisability', cause.label, e.target.checked)}
+                            />
+                            <span className="text-xs text-slate-900 font-bold uppercase tracking-wider">{cause.label}</span>
+                          </label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-6">
+                            {cause.subOptions.map(sub => (
+                              <label key={sub} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${formData.causeOfDisability.includes(sub) ? 'bg-blue-50 border-[#1e419c]' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+                                <input 
+                                  type="checkbox" 
+                                  className="w-4 h-4 rounded border-slate-300 text-[#1e419c] focus:ring-[#1e419c]"
+                                  checked={formData.causeOfDisability.includes(sub)}
+                                  onChange={(e) => handleCheckboxChange('causeOfDisability', sub, e.target.checked)}
+                                />
+                                <span className="text-xs text-slate-700 font-medium">{sub}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-md border-l-4 border-[#1e419c] mt-8">
+                  <h3 className="text-xs font-bold text-[#1e419c] uppercase tracking-wider">Certifying Physician</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Name of Certifying Physician</label>
+                    <input name="physicianName" value={formData.physicianName} onChange={handleInputChange} className={getFieldClass('physicianName', false)} placeholder="DR. JUAN DELA CRUZ" />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Cause of Disability</label>
-                    <input name="causeOfDisability" value={formData.causeOfDisability} onChange={handleInputChange} className={getFieldClass('causeOfDisability', false)} />
+                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">License No.</label>
+                    <input name="physicianLicense" value={formData.physicianLicense} onChange={handleInputChange} className={getFieldClass('physicianLicense', false)} placeholder="1234567" />
                   </div>
                 </div>
 
@@ -532,15 +620,15 @@ export const Register: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-1.5 md:col-span-2">
                     <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Father's Name</label>
-                    <input name="fatherName" value={formData.fatherName} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium uppercase focus:border-[#1e419c] outline-none" />
+                    <input name="fatherName" value={formData.fatherName} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" />
                   </div>
                   <div className="space-y-1.5 md:col-span-2">
                     <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Mother's Name</label>
-                    <input name="motherName" value={formData.motherName} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium uppercase focus:border-[#1e419c] outline-none" />
+                    <input name="motherName" value={formData.motherName} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" />
                   </div>
                   <div className="space-y-1.5 md:col-span-2">
                     <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Guardian's Name</label>
-                    <input name="guardianName" value={formData.guardianName} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium uppercase focus:border-[#1e419c] outline-none" />
+                    <input name="guardianName" value={formData.guardianName} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" />
                   </div>
                 </div>
 
@@ -560,10 +648,11 @@ export const Register: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Highest Education</label>
+                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Educational Attainment</label>
                     <select name="highestEducation" value={formData.highestEducation} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none">
                       <option value="">Select</option>
                       <option value="None">None</option>
+                      <option value="Kindergarten">Kindergarten</option>
                       <option value="Elementary">Elementary</option>
                       <option value="High School">High School</option>
                       <option value="Vocational">Vocational</option>
@@ -578,44 +667,65 @@ export const Register: React.FC = () => {
                       <option value="Employed">Employed</option>
                       <option value="Unemployed">Unemployed</option>
                       <option value="Self-Employed">Self-Employed</option>
-                      <option value="Student">Student</option>
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Employment Type</label>
-                    <input name="employmentType" value={formData.employmentType} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium uppercase focus:border-[#1e419c] outline-none" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Employment Category</label>
-                    <input name="employmentCategory" value={formData.employmentCategory} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium uppercase focus:border-[#1e419c] outline-none" />
-                  </div>
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Occupation</label>
-                    <input name="occupation" value={formData.occupation} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium uppercase focus:border-[#1e419c] outline-none" />
-                  </div>
+                  
+                  {formData.employmentStatus === 'Employed' && (
+                    <>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Employment Type</label>
+                        <select name="employmentType" value={formData.employmentType} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none">
+                          <option value="">Select</option>
+                          <option value="Permanent/Regular">Permanent/Regular</option>
+                          <option value="Seasonal">Seasonal</option>
+                          <option value="Casual">Casual</option>
+                          <option value="Emergency">Emergency</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Employment Category</label>
+                        <select name="employmentCategory" value={formData.employmentCategory} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none">
+                          <option value="">Select</option>
+                          <option value="Government">Government</option>
+                          <option value="Private">Private</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {formData.employmentStatus !== 'Unemployed' && (
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Occupation</label>
+                      <input name="occupation" value={formData.occupation} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" />
+                    </div>
+                  )}
                 </div>
 
-                <div className="bg-slate-50 p-4 rounded-md border-l-4 border-[#1e419c]">
-                  <h3 className="text-xs font-bold text-[#1e419c] uppercase tracking-wider">Organization Information</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Organization Name</label>
-                    <input name="orgName" value={formData.orgName} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium uppercase focus:border-[#1e419c] outline-none" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Org. Contact Person</label>
-                    <input name="orgContactPerson" value={formData.orgContactPerson} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium uppercase focus:border-[#1e419c] outline-none" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Organization Contact No.</label>
-                    <input name="orgContactNo" value={formData.orgContactNo} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" />
-                  </div>
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Organization Address</label>
-                    <input name="orgAddress" value={formData.orgAddress} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium uppercase focus:border-[#1e419c] outline-none" />
-                  </div>
-                </div>
+                {formData.employmentStatus === 'Employed' && (
+                  <>
+                    <div className="bg-slate-50 p-4 rounded-md border-l-4 border-[#1e419c]">
+                      <h3 className="text-xs font-bold text-[#1e419c] uppercase tracking-wider">Organization Information</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-1.5 md:col-span-2">
+                        <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Organization Name</label>
+                        <input name="orgName" value={formData.orgName} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Org. Contact Person</label>
+                        <input name="orgContactPerson" value={formData.orgContactPerson} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Organization Contact No.</label>
+                        <input name="orgContactNo" value={formData.orgContactNo} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" />
+                      </div>
+                      <div className="space-y-1.5 md:col-span-2">
+                        <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Organization Address</label>
+                        <input name="orgAddress" value={formData.orgAddress} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" />
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <div className="bg-slate-50 p-4 rounded-md border-l-4 border-[#1e419c]">
                   <h3 className="text-xs font-bold text-[#1e419c] uppercase tracking-wider">Account Security</h3>
@@ -646,70 +756,142 @@ export const Register: React.FC = () => {
 
             {step === 5 && (
               <div className="space-y-8 animate-fade-in-up">
+                <div className="bg-slate-50 p-6 rounded-lg border border-slate-100 space-y-3">
+                    <h3 className="text-sm font-bold text-[#1e419c] uppercase tracking-wider">Required Documents for PWD ID:</h3>
+                    <ul className="space-y-2">
+                        <li className="flex items-start gap-2 text-xs text-slate-600">
+                            <div className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                            <span><strong>Certificate of Disability</strong> (from San Juan Medical Center)</span>
+                        </li>
+                        <li className="flex items-start gap-2 text-xs text-slate-600">
+                            <div className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                            <span><strong>Certificate of Residency</strong> (from your Barangay - Purpose: For PWD ID Requirement)</span>
+                        </li>
+                        <li className="flex items-start gap-2 text-xs text-slate-600">
+                            <div className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                            <span><strong>Government-Issued ID</strong> (Please select and provide numbers below)</span>
+                        </li>
+                    </ul>
+                </div>
+
                 <div className="bg-slate-50 p-4 rounded-md border-l-4 border-[#1e419c]">
                   <h3 className="text-xs font-bold text-[#1e419c] uppercase tracking-wider">Government IDs</h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">SSS Number</label>
-                    <input name="sssNumber" value={formData.sssNumber} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">GSIS Number</label>
-                    <input name="gsisNumber" value={formData.gsisNumber} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Pag-IBIG Number</label>
-                    <input name="pagIbigNumber" value={formData.pagIbigNumber} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">PSN Number</label>
-                    <input name="psnNumber" value={formData.psnNumber} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" />
-                  </div>
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">PhilHealth Number</label>
-                    <input name="philHealthNumber" value={formData.philHealthNumber} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" />
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 p-4 rounded-md border-l-4 border-[#1e419c]">
-                  <h3 className="text-xs font-bold text-[#1e419c] uppercase tracking-wider">Requirements</h3>
-                </div>
-                <div className="space-y-4">
-                  <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 space-y-2">
-                     <p className="text-sm font-semibold text-blue-900 uppercase tracking-tight">Dokumentasyon ng Kapansanan</p>
-                     <p className="text-xs text-blue-700 leading-relaxed">
-                       Pakia-attach ang iyong Medical Certificate (clinical abstract o diagnosis) at isang valid government ID.
-                     </p>
-                  </div>
-
-                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-12 text-center bg-white hover:bg-slate-50 transition-all relative group cursor-pointer">
-                    <input type="file" multiple onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                    <div className="space-y-4 flex flex-col items-center">
-                       <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-md flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Upload size={32} />
-                       </div>
-                       <div className="space-y-1">
-                          <p className="font-semibold text-slate-800 uppercase tracking-widest text-xs">Pindutin para mag-upload</p>
-                          <p className="text-[10px] text-slate-400 font-medium">PDF, JPG, PNG (Max 5MB bawat file)</p>
-                       </div>
-                    </div>
-                  </div>
-
-                  {files.length > 0 && (
-                    <div className="space-y-2 pt-4">
-                      {files.map((f, i) => (
-                        <div key={i} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-md shadow-sm text-xs text-slate-900 font-medium animate-fade-in">
-                          <div className="flex items-center gap-3">
-                            <FileCheck size={18} className="text-emerald-500" /> {f}
-                          </div>
-                          <button type="button" onClick={() => removeFile(i)} className="text-slate-300 hover:text-red-500 transition-colors">
-                            <X size={18} />
-                          </button>
-                        </div>
+                
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1 block">Select Government ID Types to Provide</label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                      {['SSS Number', 'GSIS Number', 'Pag-IBIG Number', 'PSN Number', 'PhilHealth Number'].map(type => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => {
+                            setSelectedGovIdTypes(prev => 
+                              prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+                            );
+                          }}
+                          className={`p-3 text-[10px] font-bold uppercase tracking-widest border rounded-xl transition-all ${selectedGovIdTypes.includes(type) ? 'bg-[#1e419c] text-white border-[#1e419c] shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:border-[#1e419c]'}`}
+                        >
+                          {type}
+                        </button>
                       ))}
                     </div>
+                  </div>
+
+                  {selectedGovIdTypes.includes('SSS Number') && (
+                    <div className="space-y-1.5 animate-fade-in">
+                      <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">SSS Number</label>
+                      <input name="sssNumber" value={formData.sssNumber} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" placeholder="00-0000000-0" />
+                    </div>
                   )}
+                  {selectedGovIdTypes.includes('GSIS Number') && (
+                    <div className="space-y-1.5 animate-fade-in">
+                      <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">GSIS Number</label>
+                      <input name="gsisNumber" value={formData.gsisNumber} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" placeholder="00000000000" />
+                    </div>
+                  )}
+                  {selectedGovIdTypes.includes('Pag-IBIG Number') && (
+                    <div className="space-y-1.5 animate-fade-in">
+                      <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Pag-IBIG Number</label>
+                      <input name="pagIbigNumber" value={formData.pagIbigNumber} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" placeholder="0000-0000-0000" />
+                    </div>
+                  )}
+                  {selectedGovIdTypes.includes('PSN Number') && (
+                    <div className="space-y-1.5 animate-fade-in">
+                      <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">PSN Number</label>
+                      <input name="psnNumber" value={formData.psnNumber} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" placeholder="0000-0000-0000-0000" />
+                    </div>
+                  )}
+                  {selectedGovIdTypes.includes('PhilHealth Number') && (
+                    <div className="space-y-1.5 animate-fade-in">
+                      <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">PhilHealth Number</label>
+                      <input name="philHealthNumber" value={formData.philHealthNumber} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-sm text-slate-900 font-medium focus:border-[#1e419c] outline-none" placeholder="00-000000000-0" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-md border-l-4 border-[#1e419c] mt-8">
+                  <h3 className="text-xs font-bold text-[#1e419c] uppercase tracking-wider">Document Uploads</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Disability Certificate */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">Certificate of Disability <span className="text-red-500">*</span></label>
+                    <div className={`border-2 border-dashed ${errors.includes('disabilityCert') ? 'border-red-500 bg-red-50' : 'border-slate-200 bg-white'} rounded-xl p-6 flex flex-col items-center justify-center group hover:bg-slate-50 cursor-pointer relative transition-all h-40`}>
+                      <input type="file" onChange={(e) => { if(e.target.files?.[0]) { setDisabilityCert(e.target.files[0].name); setErrors(prev => prev.filter(err => err !== 'disabilityCert')); } }} className="absolute inset-0 opacity-0 cursor-pointer" />
+                      {disabilityCert ? (
+                        <div className="flex flex-col items-center text-emerald-600 text-center">
+                          <FileCheck size={32} />
+                          <span className="text-[10px] mt-2 font-medium break-all px-2">{disabilityCert}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload size={32} className={`${errors.includes('disabilityCert') ? 'text-red-300' : 'text-slate-300'} mb-2`} />
+                          <p className={`text-[10px] text-center font-medium ${errors.includes('disabilityCert') ? 'text-red-400' : 'text-slate-400'}`}>Upload Certificate of Disability</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Residency Certificate */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">Certificate of Residency <span className="text-red-500">*</span></label>
+                    <div className={`border-2 border-dashed ${errors.includes('residencyCert') ? 'border-red-500 bg-red-50' : 'border-slate-200 bg-white'} rounded-xl p-6 flex flex-col items-center justify-center group hover:bg-slate-50 cursor-pointer relative transition-all h-40`}>
+                      <input type="file" onChange={(e) => { if(e.target.files?.[0]) { setResidencyCert(e.target.files[0].name); setErrors(prev => prev.filter(err => err !== 'residencyCert')); } }} className="absolute inset-0 opacity-0 cursor-pointer" />
+                      {residencyCert ? (
+                        <div className="flex flex-col items-center text-emerald-600 text-center">
+                          <FileCheck size={32} />
+                          <span className="text-[10px] mt-2 font-medium break-all px-2">{residencyCert}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload size={32} className={`${errors.includes('residencyCert') ? 'text-red-300' : 'text-slate-300'} mb-2`} />
+                          <p className={`text-[10px] text-center font-medium ${errors.includes('residencyCert') ? 'text-red-400' : 'text-slate-400'}`}>Upload Certificate of Residency</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Government ID */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">Scanned Government ID <span className="text-red-500">*</span></label>
+                    <div className={`border-2 border-dashed ${errors.includes('govIdFile') ? 'border-red-500 bg-red-50' : 'border-slate-200 bg-white'} rounded-xl p-6 flex flex-col items-center justify-center group hover:bg-slate-50 cursor-pointer relative transition-all h-40`}>
+                      <input type="file" onChange={(e) => { if(e.target.files?.[0]) { setGovIdFile(e.target.files[0].name); setErrors(prev => prev.filter(err => err !== 'govIdFile')); } }} className="absolute inset-0 opacity-0 cursor-pointer" />
+                      {govIdFile ? (
+                        <div className="flex flex-col items-center text-emerald-600 text-center">
+                          <FileCheck size={32} />
+                          <span className="text-[10px] mt-2 font-medium break-all px-2">{govIdFile}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload size={32} className={`${errors.includes('govIdFile') ? 'text-red-300' : 'text-slate-300'} mb-2`} />
+                          <p className={`text-[10px] text-center font-medium ${errors.includes('govIdFile') ? 'text-red-400' : 'text-slate-400'}`}>Upload Scanned Government ID</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex justify-between pt-8">
@@ -717,10 +899,10 @@ export const Register: React.FC = () => {
                   <button 
                     type="submit" 
                     disabled={loading}
-                    className="px-16 py-5 bg-[#1e419c] text-white rounded-md font-semibold uppercase tracking-widest text-sm flex items-center justify-center gap-3 shadow-2xl hover:opacity-90 active:scale-95 transition-all disabled:opacity-50"
+                    className="px-12 py-4 bg-[#1e419c] text-white rounded-md font-semibold uppercase tracking-widest text-xs flex items-center gap-2 shadow-xl hover:opacity-90 active:scale-95 transition-all disabled:opacity-50"
                   >
-                    {loading && <RefreshCw size={18} className="animate-spin" />}
-                    {loading ? 'Sinisumite...' : 'Finalize Registration'}
+                    {loading ? <RefreshCw size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
+                    Complete Registration
                   </button>
                 </div>
               </div>

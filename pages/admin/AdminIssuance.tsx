@@ -9,7 +9,7 @@ import {
   UserPlus, Info, Calendar, User as UserIcon, X, ShieldCheck, Heart, 
   Eye, Download, FileText, AlertCircle, Trash2, MapPin, Phone, 
   ShieldAlert, Globe, Fingerprint, Camera, Upload, ArrowRight, ArrowLeft,
-  AlertTriangle, ZoomIn, ZoomOut, File, Tag, HelpCircle, RefreshCw, Activity, CloudOff, Database, ClipboardList, Layers
+  AlertTriangle, ZoomIn, ZoomOut, File, Tag, HelpCircle, RefreshCw, Activity, CloudOff, Database, ClipboardList, Layers, MapPinned
 } from 'lucide-react';
 
 const calculateAge = (birthDate: string): number => {
@@ -47,6 +47,119 @@ export const AdminIssuance: React.FC = () => {
   const [files, setFiles] = useState<string[]>([]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
 
+  const handleDownloadFile = (fileName: string) => {
+    const isPdf = fileName.toLowerCase().endsWith('.pdf');
+    let blob: Blob;
+    
+    if (isPdf) {
+        // Minimal valid PDF
+        const pdfContent = `%PDF-1.1
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /Resources << >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 21 >>
+stream
+BT /F1 12 Tf ET
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f
+0000000009 00000 n
+0000000052 00000 n
+0000000101 00000 n
+0000000178 00000 n
+trailer
+<< /Size 5 /Root 1 0 R >>
+startxref
+249
+%%EOF`;
+        blob = new Blob([pdfContent], { type: 'application/pdf' });
+    } else {
+        blob = new Blob([`Mock data for ${fileName}`], { type: 'text/plain' });
+    }
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const DocumentViewer = () => {
+    if (!activeFile) return null;
+    const isImage = activeFile.match(/\.(jpg|jpeg|png|gif)$/i);
+    const isPdf = activeFile.toLowerCase().endsWith('.pdf');
+    
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={() => setActiveFile(null)} />
+            <div className="bg-white w-full max-w-4xl h-[80vh] rounded-[2.5rem] shadow-2xl relative z-20 overflow-hidden flex flex-col animate-scale-up">
+                <div className="bg-[#1e419c] p-6 text-white flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <FileText size={20} />
+                        <span className="font-medium uppercase tracking-widest text-xs">{activeFile}</span>
+                    </div>
+                    <button onClick={() => setActiveFile(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="flex-1 bg-slate-100 flex items-center justify-center p-10 overflow-auto">
+                    {isImage ? (
+                        <img 
+                            src={`https://picsum.photos/seed/${activeFile}/1200/800`} 
+                            alt={activeFile} 
+                            className="max-w-full max-h-full object-contain rounded-xl shadow-lg"
+                            referrerPolicy="no-referrer"
+                        />
+                    ) : isPdf ? (
+                        <div className="w-full h-full bg-white rounded-3xl shadow-inner border border-slate-200 flex flex-col items-center justify-center text-slate-400 font-medium uppercase tracking-widest">
+                            <FileText size={64} className="mb-4 text-[#1e419c] opacity-20" />
+                            <p>PDF Preview Active</p>
+                            <p className="text-[10px] mt-2 opacity-60">Secure Document Node Connection Established</p>
+                            <button 
+                                onClick={() => handleDownloadFile(activeFile)}
+                                className="mt-6 px-6 py-2 bg-[#1e419c] text-white rounded-lg text-[10px] tracking-widest"
+                            >
+                                Open in New Tab to View
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="w-full h-full bg-white rounded-3xl shadow-inner border border-slate-200 flex items-center justify-center text-slate-400 font-medium uppercase tracking-widest">
+                            <div className="text-center">
+                                <FileText size={48} className="mx-auto mb-4 opacity-20" />
+                                Document Preview Mode
+                                <p className="text-[10px] mt-2 opacity-60">Secure PDF/Doc Viewer Active</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                <div className="p-6 bg-white border-t border-slate-200 flex justify-between items-center shrink-0">
+                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest flex items-center gap-2">
+                        <ShieldCheck size={14} className="text-emerald-500"/> Verified Document Source
+                    </p>
+                    <button 
+                        onClick={() => handleDownloadFile(activeFile)}
+                        className="px-10 py-3 bg-[#1e419c] text-white rounded-xl font-medium text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2"
+                    >
+                        <Download size={14} /> Download Copy
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+  };
+
   // Camera State for Walk-in
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -56,7 +169,8 @@ export const AdminIssuance: React.FC = () => {
   // Form State for Walk-in
   const [idFormData, setIdFormData] = useState({
     firstName: '', middleName: '', lastName: '', suffix: '', birthDate: '', birthPlace: '', sex: '', citizenship: 'Filipino', civilStatus: '',
-    address: '', contactNumber: '', emergencyContactPerson: '', emergencyContactNumber: '', joinFederation: false, disabilityType: '', capturedImage: undefined as string | undefined
+    address: '', contactNumber: '', emergencyContactPerson: '', emergencyContactNumber: '', joinFederation: false, disabilityType: '', capturedImage: undefined as string | undefined,
+    controlNo: ''
   });
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -102,7 +216,8 @@ export const AdminIssuance: React.FC = () => {
         emergencyContactNumber: isApplying.emergencyContactNumber || '',
         joinFederation: isApplying.joinFederation || false,
         disabilityType: isApplying.disabilityType || '',
-        capturedImage: undefined
+        capturedImage: undefined,
+        controlNo: isApplying.pwdIdNumber || ''
       });
       setFiles(['Verified_By_Admin_Physical_Copy.pdf']);
       setWalkInStep(1);
@@ -174,7 +289,7 @@ export const AdminIssuance: React.FC = () => {
         type: ApplicationType.ID_NEW,
         description: `Walk-in ID Application Form Submitted by Admin.`,
         documents: files,
-        formData: { ...idFormData }
+        formData: { ...idFormData, isWalkIn: true }
     });
     if (res.ok) {
         setIsApplying(null);
@@ -250,6 +365,7 @@ export const AdminIssuance: React.FC = () => {
               <button onClick={onClose} className="p-2 text-white/60 hover:text-white transition-colors"><X size={24} /></button>
            </div>
            <div className="flex-1 overflow-y-auto p-10 bg-slate-50 space-y-8 custom-scrollbar">
+              <DocumentViewer />
               <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col md:flex-row gap-8 items-center">
                   <img src={app.formData?.capturedImage || user?.avatarUrl || 'https://www.phoenix.com.ph/wp-content/uploads/2026/03/Group-260-e1773292822209.png'} className="w-32 h-32 rounded-xl bg-slate-100 border-4 border-white shadow-xl object-cover" alt="Avatar" />
                   <div className="flex-1 text-center md:text-left space-y-2">
@@ -272,7 +388,10 @@ export const AdminIssuance: React.FC = () => {
                           {app.documents?.map((doc, i) => (
                               <div key={i} className="flex items-center justify-between p-2 bg-slate-50 border border-slate-100 rounded-xl">
                                   <span className="text-[9px] font-medium uppercase text-slate-400 truncate max-w-[150px]">{doc}</span>
-                                  <button onClick={() => setActiveFile(doc)} className="text-[#1e419c]"><Eye size={14}/></button>
+                                  <div className="flex gap-1">
+                                      <button onClick={() => setActiveFile(doc)} className="text-[#1e419c] p-1 hover:bg-blue-50 rounded transition-all" title="View"><Eye size={14}/></button>
+                                      <button onClick={() => handleDownloadFile(doc)} className="text-[#1e419c] p-1 hover:bg-blue-50 rounded transition-all" title="Download"><Download size={14}/></button>
+                                  </div>
                               </div>
                           ))}
                       </div>
@@ -499,7 +618,7 @@ export const AdminIssuance: React.FC = () => {
                                         email: 'walkin@temp.com',
                                         disabilityType: idFormData.disabilityType,
                                         avatarUrl: capturedImage,
-                                        pwdIdNumber: getNextPwdIdNumber()
+                                        pwdIdNumber: isApplying?.pwdIdNumber || getNextPwdIdNumber()
                                     }} />
                                 </div>
                             )}
@@ -561,10 +680,32 @@ export const AdminIssuance: React.FC = () => {
             ) : (
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
-                        <thead className="bg-[#1e419c] text-white text-[10px] font-normal uppercase tracking-[0.2em]"><tr><th className="p-8">ID Applicant Profile</th><th className="p-8">ID Lifecycle Status</th><th className="p-8">Applied Date</th><th className="p-8 text-right">Action Grid</th></tr></thead>
+                        <thead className="bg-[#1e419c] text-white text-[10px] font-normal uppercase tracking-[0.2em]">
+                            <tr>
+                                <th className="p-8">Applied Date</th>
+                                <th className="p-8">Status</th>
+                                <th className="p-8">Applicant Name</th>
+                                <th className="p-8">Mode</th>
+                                <th className="p-8 text-right">Action</th>
+                            </tr>
+                        </thead>
                         <tbody className="divide-y divide-slate-100">
                             {filteredApps.map(app => (
                                 <tr key={app.id} className="hover:bg-slate-50/80 transition-colors group">
+                                    <td className="p-8">
+                                        <span className="text-xs font-medium text-slate-600 flex items-center gap-2">
+                                            <Calendar size={14} className="text-slate-300" /> {app.date}
+                                        </span>
+                                    </td>
+                                    <td className="p-8">
+                                        <span className={`px-2.5 py-1 rounded-full text-[9px] font-medium uppercase tracking-widest border ${
+                                            app.status === ApplicationStatus.PENDING ? 'bg-amber-50 text-amber-600 border-amber-100' : 
+                                            app.status === ApplicationStatus.APPROVED ? 'bg-blue-50 text-blue-600 border-blue-100' : 
+                                            app.status === ApplicationStatus.ISSUED ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                                            app.status === ApplicationStatus.CLARIFICATION ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                            'bg-red-50 text-red-600 border-red-100'
+                                        }`}>{app.status}</span>
+                                    </td>
                                     <td className="p-8">
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden border border-slate-200 shrink-0">
@@ -577,28 +718,54 @@ export const AdminIssuance: React.FC = () => {
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="font-medium text-slate-900 uppercase tracking-tight text-sm leading-tight">{app.userName}</span>
-                                                <span className="text-[10px] font-mono text-slate-400 mt-1 uppercase tracking-widest">{app.type} Entry #{app.id} {users.find(u => u.id === app.userId)?.pwdIdNumber && `| PWD ID: ${users.find(u => u.id === app.userId)?.pwdIdNumber}`}</span>
+                                                <span className="text-[10px] font-mono text-slate-400 mt-1 uppercase tracking-widest">{app.type} ID: {users.find(u => u.id === app.userId)?.pwdIdNumber || app.formData?.controlNo || app.id}</span>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="p-8"><span className={`px-2.5 py-1 rounded-full text-[9px] font-medium uppercase tracking-widest border ${
-                                        app.status === ApplicationStatus.PENDING ? 'bg-amber-50 text-amber-600 border-amber-100' : 
-                                        app.status === ApplicationStatus.APPROVED ? 'bg-blue-50 text-blue-600 border-blue-100' : 
-                                        app.status === ApplicationStatus.ISSUED ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
-                                        app.status === ApplicationStatus.CLARIFICATION ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                        'bg-red-50 text-red-600 border-red-100'
-                                    }`}>{app.status}</span></td>
-                                    <td className="p-8"><span className="text-xs font-medium text-slate-600 flex items-center gap-2"><Calendar size={14} className="text-slate-300" /> {app.date}</span></td>
+                                    <td className="p-8">
+                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
+                                            app.formData?.isWalkIn 
+                                                ? 'bg-purple-50 text-purple-600 border-purple-100' 
+                                                : 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                                        }`}>
+                                            {app.formData?.isWalkIn ? (
+                                                <><MapPin size={14} /> Walk-in</>
+                                            ) : (
+                                                <><Globe size={14} /> Online</>
+                                            )}
+                                        </span>
+                                    </td>
                                     <td className="p-8 text-right">
                                         <div className="flex justify-end gap-3">
                                             {app.status === ApplicationStatus.PENDING ? (
-                                                <><button onClick={() => setViewingApp(app)} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-medium text-[10px] uppercase tracking-widest hover:bg-[#1e419c] hover:text-white transition-all flex items-center gap-2 shadow-sm"><Eye size={14} /> Review</button><button onClick={() => setRejectingApp(app)} className="px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white shadow-xl shadow-red-600/10 transition-all active:scale-95"><XCircle size={18} /></button><button onClick={() => handleApprove(app.id)} className="px-4 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all"><CheckCircle size={18}/></button></>
+                                                <>
+                                                    <button onClick={() => setViewingApp(app)} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-medium text-[10px] uppercase tracking-widest hover:bg-[#1e419c] hover:text-white transition-all flex items-center gap-2 shadow-sm">
+                                                        <Eye size={14} /> Review
+                                                    </button>
+                                                    <button onClick={() => setRejectingApp(app)} className="px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white shadow-xl shadow-red-600/10 transition-all active:scale-95">
+                                                        <XCircle size={18} />
+                                                    </button>
+                                                    <button onClick={() => handleApprove(app.id)} className="px-4 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all">
+                                                        <CheckCircle size={18}/>
+                                                    </button>
+                                                </>
                                             ) : app.status === ApplicationStatus.APPROVED ? (
-                                                <><button onClick={() => setViewingIdOnly(app)} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-medium text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"><Printer size={14} /> Print ID</button><button onClick={() => setConfirmingReleaseApp(app)} className="px-4 py-3 bg-[#1e419c] text-white rounded-xl hover:bg-opacity-90 transition-all"><Tag size={18}/></button></>
+                                                <>
+                                                    <button onClick={() => setViewingIdOnly(app)} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-medium text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm">
+                                                        <Printer size={14} /> Print ID
+                                                    </button>
+                                                    <button onClick={() => setConfirmingReleaseApp(app)} className="px-4 py-3 bg-[#1e419c] text-white rounded-xl hover:bg-opacity-90 transition-all">
+                                                        <Tag size={18}/>
+                                                    </button>
+                                                </>
                                             ) : (
                                                 <div className="flex gap-2">
-                                                    <button onClick={() => setViewingApp(app)} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 font-medium text-[10px] uppercase tracking-widest rounded-xl hover:bg-[#1e419c] hover:text-white transition-all flex items-center gap-2 shadow-sm"><Eye size={14} /> Details</button>
-                                                    <button onClick={() => updateApplicationStatus(app.id, ApplicationStatus.PENDING)} className="px-6 py-3 bg-white border border-slate-200 text-slate-400 font-medium text-[10px] uppercase tracking-widest rounded-xl hover:bg-slate-50 hover:text-primary-600 transition-all shadow-sm">Restore</button>
+                                                    <button onClick={() => setViewingApp(app)} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 font-medium text-[10px] uppercase tracking-widest rounded-xl hover:bg-[#1e419c] hover:text-white transition-all flex items-center gap-2 shadow-sm">
+                                                        <Eye size={14} /> Details
+                                                    </button>
+                                                    <button onClick={() => updateApplicationStatus(app.id, ApplicationStatus.PENDING)} className="px-6 py-3 bg-white border border-slate-200 text-slate-400 font-medium text-[10px] uppercase tracking-widest rounded-xl hover:bg-slate-50 hover:text-primary-600 transition-all shadow-sm">
+                                                        Restore
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>

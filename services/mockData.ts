@@ -253,6 +253,7 @@ export const INITIAL_APPLICATIONS: Application[] = [
     date: getRelativeDate(-5),
     status: ApplicationStatus.PENDING,
     description: 'New PWD Registration Request',
+    documents: ['medical_certificate.pdf', 'valid_id.jpg'],
     formData: {
       firstName: 'Pedro',
       middleName: 'A.',
@@ -325,6 +326,7 @@ export const INITIAL_APPLICATIONS: Application[] = [
     date: getRelativeDate(-2),
     status: ApplicationStatus.CLARIFICATION,
     description: 'Registration for Clarification',
+    documents: ['clinical_abstract.pdf'],
     formData: {
       firstName: 'Clarissa',
       middleName: '',
@@ -351,6 +353,7 @@ export const INITIAL_APPLICATIONS: Application[] = [
     date: getRelativeDate(-1),
     status: ApplicationStatus.PENDING,
     description: 'New PWD Registration',
+    documents: ['diagnosis_report.pdf', 'brgy_cert.jpg'],
     formData: {
       firstName: 'Ricardo',
       middleName: '',

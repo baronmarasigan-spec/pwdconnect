@@ -150,7 +150,7 @@ export const AdminRegistered: React.FC = () => {
             className="flex items-center gap-2 px-6 py-3 bg-osca_red text-white rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-xl hover:bg-red-700 transition-all active:scale-95"
           >
             <UserPlus size={16} />
-            Mag-rehistro dito
+            Register here
           </button>
         </header>
 
@@ -311,7 +311,7 @@ export const AdminRegistered: React.FC = () => {
             className="flex items-center gap-2 px-6 py-3 bg-osca_red text-white rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-xl hover:bg-red-700 transition-all active:scale-95"
           >
             <UserPlus size={16} />
-            Mag-rehistro dito
+            Register here
           </button>
           <button 
             onClick={triggerManualSync}
@@ -369,10 +369,31 @@ export const AdminRegistered: React.FC = () => {
             ) : (
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
-                        <thead className="bg-[#1e419c] text-white text-[10px] font-normal uppercase tracking-[0.2em]"><tr><th className="p-8">Applicant Profile</th><th className="p-8">Status Column</th><th className="p-8">Appointment Date</th><th className="p-8">Applied Date</th><th className="p-8 text-right">Action Grid</th></tr></thead>
+                        <thead className="bg-[#1e419c] text-white text-[10px] font-normal uppercase tracking-[0.2em]">
+                            <tr>
+                                <th className="p-8">Applied Date</th>
+                                <th className="p-8">Status</th>
+                                <th className="p-8">Applicant Name</th>
+                                <th className="p-8">Mode</th>
+                                <th className="p-8 text-right">Action</th>
+                            </tr>
+                        </thead>
                         <tbody className="divide-y divide-slate-100">
                             {filteredApps.map(app => (
                                 <tr key={app.id} className="hover:bg-slate-50/80 transition-colors group">
+                                    <td className="p-8">
+                                        <span className="text-xs font-medium text-slate-600 flex items-center gap-2">
+                                            <Calendar size={14} className="text-slate-300" /> {app.date}
+                                        </span>
+                                    </td>
+                                    <td className="p-8">
+                                        <span className={`px-2.5 py-1 rounded-full text-[9px] font-medium uppercase tracking-widest border ${
+                                            app.status === ApplicationStatus.PENDING ? 'bg-amber-50 text-amber-600 border-amber-100' : 
+                                            app.status === ApplicationStatus.APPROVED ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                                            app.status === ApplicationStatus.CLARIFICATION ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                            'bg-red-50 text-red-600 border-red-100'
+                                        }`}>{app.status}</span>
+                                    </td>
                                     <td className="p-8">
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden border border-slate-200 shrink-0">
@@ -385,23 +406,46 @@ export const AdminRegistered: React.FC = () => {
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="font-medium text-slate-900 uppercase tracking-tight text-sm leading-tight">{app.userName}</span>
+                                                <span className="text-[10px] text-slate-400 uppercase tracking-tight">ID: {users.find(u => u.id === app.userId)?.pwdIdNumber || app.id}</span>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="p-8"><span className={`px-2.5 py-1 rounded-full text-[9px] font-medium uppercase tracking-widest border ${
-                                        app.status === ApplicationStatus.PENDING ? 'bg-amber-50 text-amber-600 border-amber-100' : 
-                                        app.status === ApplicationStatus.APPROVED ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
-                                        app.status === ApplicationStatus.CLARIFICATION ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                        'bg-red-50 text-red-600 border-red-100'
-                                    }`}>{app.status}</span></td>
-                                    <td className="p-8"><span className="text-xs font-medium text-slate-600 flex items-center gap-2"><Calendar size={14} className="text-slate-300" /> {app.appointmentDate || 'N/A'}</span></td>
-                                    <td className="p-8"><span className="text-xs font-medium text-slate-600 flex items-center gap-2"><Calendar size={14} className="text-slate-300" /> {app.date}</span></td>
+                                    <td className="p-8">
+                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
+                                            app.formData?.isWalkIn 
+                                                ? 'bg-purple-50 text-purple-600 border-purple-100' 
+                                                : 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                                        }`}>
+                                            {app.formData?.isWalkIn ? (
+                                                <><MapPin size={14} /> Walk-in</>
+                                            ) : (
+                                                <><Globe size={14} /> Online</>
+                                            )}
+                                        </span>
+                                    </td>
                                     <td className="p-8 text-right">
                                         <div className="flex justify-end gap-3">
                                             {app.status === ApplicationStatus.PENDING ? (
-                                                <><button onClick={() => setViewingApp(app)} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-medium text-[10px] uppercase tracking-widest hover:bg-[#1e419c] hover:text-white transition-all flex items-center gap-2 shadow-sm"><Eye size={14} /> Review</button><button onClick={() => setRejectingApp(app)} className="px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white shadow-xl shadow-red-600/10 transition-all active:scale-95"><XCircle size={18} /></button><button onClick={() => setConfirmingApproveApp(app)} className="px-4 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 shadow-xl shadow-emerald-600/20 transition-all active:scale-95"><CheckCircle size={18} /></button></>
+                                                <>
+                                                    <button onClick={() => setViewingApp(app)} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-medium text-[10px] uppercase tracking-widest hover:bg-[#1e419c] hover:text-white transition-all flex items-center gap-2 shadow-sm">
+                                                        <Eye size={14} /> Review
+                                                    </button>
+                                                    <button onClick={() => setRejectingApp(app)} className="px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white shadow-xl shadow-red-600/10 transition-all active:scale-95">
+                                                        <XCircle size={18} />
+                                                    </button>
+                                                    <button onClick={() => setConfirmingApproveApp(app)} className="px-4 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 shadow-xl shadow-emerald-600/20 transition-all active:scale-95">
+                                                        <CheckCircle size={18} />
+                                                    </button>
+                                                </>
                                             ) : (
-                                                <div className="flex gap-2"><button onClick={() => setViewingApp(app)} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 font-medium text-[10px] uppercase tracking-widest rounded-xl hover:bg-[#1e419c] hover:text-white transition-all flex items-center gap-2 shadow-sm"><Eye size={14} /> Details</button><button onClick={() => updateApplicationStatus(app.id, ApplicationStatus.PENDING)} className="px-6 py-3 bg-white border border-slate-200 text-slate-400 font-medium text-[10px] uppercase tracking-widest rounded-xl hover:bg-slate-50 hover:text-primary-600 transition-all shadow-sm">Restore</button></div>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => setViewingApp(app)} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 font-medium text-[10px] uppercase tracking-widest rounded-xl hover:bg-[#1e419c] hover:text-white transition-all flex items-center gap-2 shadow-sm">
+                                                        <Eye size={14} /> Details
+                                                    </button>
+                                                    <button onClick={() => updateApplicationStatus(app.id, ApplicationStatus.PENDING)} className="px-6 py-3 bg-white border border-slate-200 text-slate-400 font-medium text-[10px] uppercase tracking-widest rounded-xl hover:bg-slate-50 hover:text-primary-600 transition-all shadow-sm">
+                                                        Restore
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
                                     </td>

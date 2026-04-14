@@ -1,33 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   Plus, 
   Trash2, 
   Edit2, 
-  Image as ImageIcon, 
   Calendar as CalendarIcon,
   Save,
-  X,
   Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { EventItem, PosterItem } from '../../types';
-
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-  });
-};
+import { EventItem } from '../../types';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
   try {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;
-    return date.toLocaleDateString('tl-PH', { month: 'long', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   } catch {
     return dateStr;
   }
@@ -44,53 +33,17 @@ const getDay = (dateStr: string) => {
 };
 
 export const AdminEvents: React.FC = () => {
-  const { events, posters, addEvent, updateEvent, deleteEvent, addPoster, updatePoster, deletePoster } = useApp();
+  const { events, addEvent, updateEvent, deleteEvent } = useApp();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'events' | 'posters' } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
 
   // Form states
-  const [eventForm, setEventForm] = useState({ title: '', date: '', image: '' });
-  const [posterForm, setPosterForm] = useState({ title: '', date: '', image: '' });
+  const [eventForm, setEventForm] = useState({ title: '', date: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editType, setEditType] = useState<'event' | 'poster' | null>(null);
 
-  const posterFileRef = useRef<HTMLInputElement>(null);
   const eventFileRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'event' | 'poster') => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const base64 = await fileToBase64(file);
-        if (type === 'event') {
-          setEventForm(prev => ({ ...prev, image: base64 }));
-        } else {
-          setPosterForm(prev => ({ ...prev, image: base64 }));
-        }
-      } catch (error) {
-        console.error("Error converting file:", error);
-      }
-    }
-  };
-
-  const handleDrop = async (e: React.DragEvent, type: 'event' | 'poster') => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      try {
-        const base64 = await fileToBase64(file);
-        if (type === 'event') {
-          setEventForm(prev => ({ ...prev, image: base64 }));
-        } else {
-          setPosterForm(prev => ({ ...prev, image: base64 }));
-        }
-      } catch (error) {
-        console.error("Error converting file:", error);
-      }
-    }
-  };
 
   const showStatus = (text: string, type: 'success' | 'error') => {
     setStatusMessage({ text, type });
@@ -99,85 +52,45 @@ export const AdminEvents: React.FC = () => {
 
   const handleEventSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!eventForm.image) {
-      showStatus("Mangyaring mag-upload ng larawan.", 'error');
-      return;
-    }
     setSubmitting(true);
     try {
-      if (editingId && editType === 'event') {
+      if (editingId) {
         await updateEvent(editingId, eventForm);
-        showStatus("Matagumpay na na-update ang kaganapan!", 'success');
+        showStatus("Event successfully updated!", 'success');
       } else {
         await addEvent(eventForm);
-        showStatus("Matagumpay na naidagdag ang kaganapan!", 'success');
+        showStatus("Event successfully added!", 'success');
       }
-      setEventForm({ title: '', date: '', image: '' });
+      setEventForm({ title: '', date: '' });
       setEditingId(null);
-      setEditType(null);
     } catch (error) {
       console.error("Error saving event:", error);
-      showStatus("May error sa pag-save. Pakisubukang muli.", 'error');
+      showStatus("Error saving event. Please try again.", 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handlePosterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!posterForm.image) {
-      showStatus("Mangyaring mag-upload ng larawan.", 'error');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      if (editingId && editType === 'poster') {
-        await updatePoster(editingId, posterForm);
-        showStatus("Matagumpay na na-update ang poster!", 'success');
-      } else {
-        await addPoster(posterForm);
-        showStatus("Matagumpay na naidagdag ang poster!", 'success');
-      }
-      setPosterForm({ title: '', date: '', image: '' });
-      setEditingId(null);
-      setEditType(null);
-    } catch (error) {
-      console.error("Error saving poster:", error);
-      showStatus("May error sa pag-save. Pakisubukang muli.", 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDelete = async (id: string, type: 'events' | 'posters') => {
-    setDeleteConfirm({ id, type });
+  const handleDelete = async (id: string) => {
+    setDeleteConfirm({ id });
   };
 
   const confirmDelete = async () => {
     if (!deleteConfirm) return;
     try {
-      if (deleteConfirm.type === 'events') {
-        await deleteEvent(deleteConfirm.id);
-      } else {
-        await deletePoster(deleteConfirm.id);
-      }
-      showStatus("Matagumpay na nabura!", 'success');
+      await deleteEvent(deleteConfirm.id);
+      showStatus("Successfully deleted!", 'success');
     } catch (error) {
       console.error("Error deleting:", error);
-      showStatus("May error sa pagbura.", 'error');
+      showStatus("Error deleting event.", 'error');
     } finally {
       setDeleteConfirm(null);
     }
   };
 
-  const startEdit = (item: any, type: 'event' | 'poster') => {
+  const startEdit = (item: any) => {
     setEditingId(item.id);
-    setEditType(type);
-    if (type === 'event') {
-      setEventForm({ title: item.title, date: item.date, image: item.image });
-    } else {
-      setPosterForm({ title: item.title, date: item.date || '', image: item.image });
-    }
+    setEventForm({ title: item.title, date: item.date });
   };
 
   if (loading) {
@@ -217,20 +130,20 @@ export const AdminEvents: React.FC = () => {
               exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100"
             >
-              <h3 className="text-xl font-bold text-slate-800 mb-2">Sigurado ka ba?</h3>
-              <p className="text-slate-500 mb-8">Ang aksyong ito ay hindi na mababawi. Sigurado ka bang gusto mong burahin ang item na ito?</p>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Are you sure?</h3>
+              <p className="text-slate-500 mb-8">This action cannot be undone. Are you sure you want to delete this item?</p>
               <div className="flex gap-4">
                 <button 
                   onClick={confirmDelete}
                   className="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold hover:bg-red-600 transition-colors"
                 >
-                  Oo, Burahin
+                  Yes, Delete
                 </button>
                 <button 
                   onClick={() => setDeleteConfirm(null)}
                   className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors"
                 >
-                  Kanselahin
+                  Cancel
                 </button>
               </div>
             </motion.div>
@@ -239,166 +152,41 @@ export const AdminEvents: React.FC = () => {
       </AnimatePresence>
 
       <header className="flex flex-col gap-2">
-        <h1 className="text-[32px] font-normal text-slate-800 leading-tight">Mga Kaganapan</h1>
-        <p className="text-slate-500 font-medium text-lg">I-update ang mga poster at petsa ng anunsyo para sa mga mamamayan.</p>
+        <h1 className="text-[32px] font-normal text-slate-800 leading-tight">Events</h1>
+        <p className="text-slate-500 font-medium text-lg">Update posters and announcement dates for citizens.</p>
       </header>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
+      <div className="max-w-4xl mx-auto">
         
-        {/* Poster Management (4-Grid Gallery) */}
-        <section className="space-y-6">
-          <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
-            <ImageIcon className="text-red-500" size={24} />
-            <h2 className="text-xl font-bold text-slate-800">Mga Poster (Gallery)</h2>
-          </div>
-
-          {loading ? (
-            <div className="p-12 text-center text-slate-300 bg-white rounded-2xl border border-slate-100">
-              <Loader2 className="animate-spin mx-auto mb-4" size={40} />
-              <p className="text-xs font-medium uppercase tracking-widest">Naglo-load ng mga poster...</p>
-            </div>
-          ) : (
-            <>
-              <form onSubmit={handlePosterSubmit} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Pamagat ng Poster</label>
-                  <input 
-                    type="text" 
-                    value={posterForm.title}
-                    onChange={(e) => setPosterForm({ ...posterForm, title: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#1e419c] focus:border-transparent outline-none transition-all"
-                    placeholder="Hal. Pista ng Pamanang Kultura"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Petsa (Opsyonal)</label>
-                  <input 
-                    type="date" 
-                    value={posterForm.date}
-                    onChange={(e) => setPosterForm({ ...posterForm, date: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#1e419c] focus:border-transparent outline-none transition-all"
-                  />
-                  <p className="text-[10px] text-slate-400 italic">Kung may petsa, ito ay lalabas din sa listahan ng mga kaganapan.</p>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Upload Image</label>
-                  <div 
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => handleDrop(e, 'poster')}
-                    onClick={() => posterFileRef.current?.click()}
-                    className="w-full aspect-video rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#1e419c] hover:bg-blue-50 transition-all overflow-hidden relative group"
-                  >
-                    {posterForm.image ? (
-                      <>
-                        <img src={posterForm.image} alt="Preview" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <p className="text-white font-bold text-sm">Palitan ang Larawan</p>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <ImageIcon className="text-slate-300" size={48} />
-                        <p className="text-slate-400 text-sm font-medium">I-drag at i-drop ang larawan dito o i-click para pumili</p>
-                        <p className="text-slate-300 text-xs">PNG, JPG hanggang 5MB</p>
-                      </>
-                    )}
-                    <input 
-                      type="file" 
-                      ref={posterFileRef}
-                      onChange={(e) => handleFileChange(e, 'poster')}
-                      className="hidden" 
-                      accept="image/*"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-3 pt-2">
-                  <button 
-                    type="submit" 
-                    disabled={submitting}
-                    className="flex-1 bg-[#1e419c] text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-800 transition-colors disabled:opacity-50"
-                  >
-                    {submitting ? <Loader2 className="animate-spin" size={18} /> : (editingId && editType === 'poster' ? <Save size={18} /> : <Plus size={18} />)}
-                    {editingId && editType === 'poster' ? 'I-update Poster' : 'Idagdag ang Poster'}
-                  </button>
-                  {editingId && editType === 'poster' && (
-                    <button 
-                      type="button"
-                      onClick={() => { setEditingId(null); setEditType(null); setPosterForm({ title: '', date: '', image: '' }); }}
-                      className="px-6 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors"
-                    >
-                      Kanselahin
-                    </button>
-                  )}
-                </div>
-              </form>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {posters.length === 0 && (
-                  <div className="col-span-full p-12 text-center text-slate-300 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                    <p className="text-xs font-medium uppercase tracking-widest">Walang mga poster na nahanap.</p>
-                  </div>
-                )}
-                <AnimatePresence>
-                  {posters.map((poster) => (
-                    <motion.div 
-                      key={poster.id}
-                      layout
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 group relative"
-                    >
-                      <div className="aspect-video rounded-xl overflow-hidden mb-3">
-                        <img src={poster.image} alt={poster.title} className="w-full h-full object-cover" />
-                      </div>
-                      <h3 className="font-bold text-slate-800 text-sm truncate">{poster.title}</h3>
-                      {poster.date && <p className="text-slate-400 text-[10px] uppercase font-bold tracking-widest">{formatDate(poster.date)}</p>}
-                      <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => startEdit(poster, 'poster')} className="p-2 bg-white rounded-lg shadow-md text-blue-600 hover:bg-blue-50">
-                          <Edit2 size={14} />
-                        </button>
-                        <button onClick={() => handleDelete(poster.id, 'posters')} className="p-2 bg-white rounded-lg shadow-md text-red-600 hover:bg-red-50">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-            </>
-          )}
-        </section>
-
         {/* Event Management (LGU Calendar) */}
         <section className="space-y-6">
           <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
             <CalendarIcon className="text-[#1e419c]" size={24} />
-            <h2 className="text-xl font-bold text-slate-800">Petsa ng Anunsyo at Aktibidad</h2>
+            <h2 className="text-xl font-bold text-slate-800">Announcement & Activity Dates</h2>
           </div>
 
           {loading ? (
             <div className="p-12 text-center text-slate-300 bg-white rounded-2xl border border-slate-100">
               <Loader2 className="animate-spin mx-auto mb-4" size={40} />
-              <p className="text-xs font-medium uppercase tracking-widest">Naglo-load ng mga kaganapan...</p>
+              <p className="text-xs font-medium uppercase tracking-widest">Loading events...</p>
             </div>
           ) : (
             <>
               <form onSubmit={handleEventSubmit} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Pamagat ng Kaganapan</label>
-                  <input 
-                    type="text" 
-                    value={eventForm.title}
-                    onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#1e419c] focus:border-transparent outline-none transition-all"
-                    placeholder="Hal. Health Checkup para sa mga Senior"
-                    required
-                  />
-                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Petsa</label>
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Event Title</label>
+                    <input 
+                      type="text" 
+                      value={eventForm.title}
+                      onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#1e419c] focus:border-transparent outline-none transition-all"
+                      placeholder="e.g. Health Checkup for Seniors"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Date</label>
                     <input 
                       type="date" 
                       value={eventForm.date}
@@ -407,37 +195,6 @@ export const AdminEvents: React.FC = () => {
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Upload Image</label>
-                    <div 
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => handleDrop(e, 'event')}
-                      onClick={() => eventFileRef.current?.click()}
-                      className="w-full aspect-video rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#1e419c] hover:bg-blue-50 transition-all overflow-hidden relative group"
-                    >
-                      {eventForm.image ? (
-                        <>
-                          <img src={eventForm.image} alt="Preview" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <p className="text-white font-bold text-sm">Palitan ang Larawan</p>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <ImageIcon className="text-slate-300" size={48} />
-                          <p className="text-slate-400 text-sm font-medium">I-drag at i-drop ang larawan dito o i-click para pumili</p>
-                          <p className="text-slate-300 text-xs">PNG, JPG hanggang 5MB</p>
-                        </>
-                      )}
-                      <input 
-                        type="file" 
-                        ref={eventFileRef}
-                        onChange={(e) => handleFileChange(e, 'event')}
-                        className="hidden" 
-                        accept="image/*"
-                      />
-                    </div>
-                  </div>
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button 
@@ -445,16 +202,16 @@ export const AdminEvents: React.FC = () => {
                     disabled={submitting}
                     className="flex-1 bg-[#1e419c] text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-800 transition-colors disabled:opacity-50"
                   >
-                    {submitting ? <Loader2 className="animate-spin" size={18} /> : (editingId && editType === 'event' ? <Save size={18} /> : <Plus size={18} />)}
-                    {editingId && editType === 'event' ? 'I-update Kaganapan' : 'Idagdag ang Kaganapan'}
+                    {submitting ? <Loader2 className="animate-spin" size={18} /> : (editingId ? <Save size={18} /> : <Plus size={18} />)}
+                    {editingId ? 'Update Event' : 'Add Event'}
                   </button>
-                  {editingId && editType === 'event' && (
+                  {editingId && (
                     <button 
                       type="button"
-                      onClick={() => { setEditingId(null); setEditType(null); setEventForm({ title: '', date: '', image: '' }); }}
+                      onClick={() => { setEditingId(null); setEventForm({ title: '', date: '' }); }}
                       className="px-6 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors"
                     >
-                      Kanselahin
+                      Cancel
                     </button>
                   )}
                 </div>
@@ -463,7 +220,7 @@ export const AdminEvents: React.FC = () => {
               <div className="space-y-3">
                 {events.length === 0 && (
                   <div className="p-12 text-center text-slate-300 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                    <p className="text-xs font-medium uppercase tracking-widest">Walang mga kaganapan na nahanap.</p>
+                    <p className="text-xs font-medium uppercase tracking-widest">No events found.</p>
                   </div>
                 )}
                 <AnimatePresence>
@@ -486,10 +243,10 @@ export const AdminEvents: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => startEdit(event, 'event')} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
+                        <button onClick={() => startEdit(event)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
                           <Edit2 size={16} />
                         </button>
-                        <button onClick={() => handleDelete(event.id, 'events')} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                        <button onClick={() => handleDelete(event.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
                           <Trash2 size={16} />
                         </button>
                       </div>

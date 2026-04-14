@@ -6,12 +6,13 @@ import { ApplicationStatus, ApplicationType, Application } from '../../types';
 import { 
   CheckCircle, XCircle, HeartHandshake, Archive, Search, Banknote, 
   Clock, HelpCircle, X, UserMinus, Eye, Download, FileText, 
-  ZoomIn, ZoomOut, Printer, ShieldCheck, AlertCircle, File, RefreshCw
+  ZoomIn, ZoomOut, Printer, ShieldCheck, AlertCircle, File, RefreshCw,
+  MapPin, Globe
 } from 'lucide-react';
 
 export const AdminBenefits: React.FC = () => {
   const { tab } = useParams<{ tab: string }>();
-  const { applications, updateApplicationStatus } = useApp();
+  const { applications, updateApplicationStatus, users } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   
   // UI States for Modals
@@ -43,69 +44,116 @@ export const AdminBenefits: React.FC = () => {
     }
   };
 
-  const handleDownloadFile = (filename: string) => {
-    const dummyContent = `Benefit Application Document: ${filename}\nApplicant: ${viewingApp?.userName}\nReference: OSCA Social Services\nDate: ${new Date().toLocaleDateString()}`;
-    const blob = new Blob([dummyContent], { type: 'text/plain' });
+  const handleDownloadFile = (fileName: string) => {
+    const isPdf = fileName.toLowerCase().endsWith('.pdf');
+    let blob: Blob;
+    
+    if (isPdf) {
+        // Minimal valid PDF
+        const pdfContent = `%PDF-1.1
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /Resources << >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 21 >>
+stream
+BT /F1 12 Tf ET
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f
+0000000009 00000 n
+0000000052 00000 n
+0000000101 00000 n
+0000000178 00000 n
+trailer
+<< /Size 5 /Root 1 0 R >>
+startxref
+249
+%%EOF`;
+        blob = new Blob([pdfContent], { type: 'application/pdf' });
+    } else {
+        blob = new Blob([`Mock data for ${fileName}`], { type: 'text/plain' });
+    }
+
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = filename;
+    link.download = fileName;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
   const DocumentViewer = () => {
     if (!activeFile) return null;
+    const isImage = activeFile.match(/\.(jpg|jpeg|png|gif)$/i);
+    const isPdf = activeFile.toLowerCase().endsWith('.pdf');
+    
     return (
-      <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-         <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-xl" onClick={() => setActiveFile(null)} />
-         <div className="bg-white w-full max-w-4xl h-full rounded-[2.5rem] relative z-20 flex flex-col overflow-hidden animate-scale-up shadow-2xl">
-            <div className="px-8 py-4 border-b border-slate-200 flex justify-between items-center bg-white shrink-0">
-               <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-primary-50 text-primary-600 rounded-xl flex items-center justify-center">
-                     <FileText size={18} />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-800 text-sm">{activeFile}</p>
-                    <p className="text-[10px] text-slate-400 font-medium uppercase mt-1">Benefit Requirement Scan</p>
-                  </div>
-               </div>
-               <div className="flex items-center gap-2">
-                  <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><ZoomIn size={18}/></button>
-                  <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><ZoomOut size={18}/></button>
-                  <button onClick={() => window.print()} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><Printer size={18}/></button>
-                  <div className="w-px h-6 bg-slate-200 mx-2"></div>
-                  <button onClick={() => setActiveFile(null)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><X size={20}/></button>
-               </div>
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={() => setActiveFile(null)} />
+            <div className="bg-white w-full max-w-4xl h-[80vh] rounded-[2.5rem] shadow-2xl relative z-20 overflow-hidden flex flex-col animate-scale-up">
+                <div className="bg-[#1e419c] p-6 text-white flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <FileText size={20} />
+                        <span className="font-medium uppercase tracking-widest text-xs">{activeFile}</span>
+                    </div>
+                    <button onClick={() => setActiveFile(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="flex-1 bg-slate-100 flex items-center justify-center p-10 overflow-auto">
+                    {isImage ? (
+                        <img 
+                            src={`https://picsum.photos/seed/${activeFile}/1200/800`} 
+                            alt={activeFile} 
+                            className="max-w-full max-h-full object-contain rounded-xl shadow-lg"
+                            referrerPolicy="no-referrer"
+                        />
+                    ) : isPdf ? (
+                        <div className="w-full h-full bg-white rounded-3xl shadow-inner border border-slate-200 flex flex-col items-center justify-center text-slate-400 font-medium uppercase tracking-widest">
+                            <FileText size={64} className="mb-4 text-[#1e419c] opacity-20" />
+                            <p>PDF Preview Active</p>
+                            <p className="text-[10px] mt-2 opacity-60">Secure Document Node Connection Established</p>
+                            <button 
+                                onClick={() => handleDownloadFile(activeFile)}
+                                className="mt-6 px-6 py-2 bg-[#1e419c] text-white rounded-lg text-[10px] tracking-widest"
+                            >
+                                Open in New Tab to View
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="w-full h-full bg-white rounded-3xl shadow-inner border border-slate-200 flex items-center justify-center text-slate-400 font-medium uppercase tracking-widest">
+                            <div className="text-center">
+                                <FileText size={48} className="mx-auto mb-4 opacity-20" />
+                                Document Preview Mode
+                                <p className="text-[10px] mt-2 opacity-60">Secure PDF/Doc Viewer Active</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                <div className="p-6 bg-white border-t border-slate-200 flex justify-between items-center shrink-0">
+                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest flex items-center gap-2">
+                        <ShieldCheck size={14} className="text-emerald-500"/> Verified Document Source
+                    </p>
+                    <button 
+                        onClick={() => handleDownloadFile(activeFile)}
+                        className="px-10 py-3 bg-[#1e419c] text-white rounded-xl font-medium text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2"
+                    >
+                        <Download size={14} /> Download Copy
+                    </button>
+                </div>
             </div>
-            <div className="flex-1 bg-slate-200 overflow-y-auto p-12 flex justify-center custom-scrollbar">
-               <div className="w-full max-w-[700px] aspect-[1/1.4] bg-white shadow-2xl rounded-sm p-16 relative overflow-hidden ring-1 ring-slate-300">
-                  <div className="absolute inset-0 opacity-5 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]"></div>
-                  <div className="flex flex-col items-center text-center mb-12 border-b-2 border-slate-100 pb-8">
-                     <img src="https://dev2.phoenix.com.ph/wp-content/uploads/2025/12/Seal_of_San_Juan_Metro_Manila.png" className="w-16 h-16 mb-4 opacity-80" alt="Seal" />
-                     <h4 className="text-[9px] font-medium text-slate-400 uppercase tracking-[0.2em]">Republic of the Philippines</h4>
-                     <h3 className="text-base font-semibold text-slate-800 uppercase">Benefit Eligibility Document</h3>
-                     <p className="text-[9px] text-slate-500 font-medium uppercase mt-1">Certified Official Verification Copy</p>
-                  </div>
-                  <div className="space-y-8 animate-pulse">
-                     <div className="h-4 bg-slate-50 w-1/3 rounded"></div>
-                     <div className="space-y-3">
-                        <div className="h-10 bg-slate-50 w-full rounded-lg"></div>
-                        <div className="h-10 bg-slate-50 w-full rounded-lg"></div>
-                        <div className="h-10 bg-slate-50 w-2/3 rounded-lg"></div>
-                     </div>
-                  </div>
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] rotate-[-30deg] pointer-events-none select-none text-[60px] font-semibold whitespace-nowrap uppercase">
-                     Benefit Review Copy
-                  </div>
-               </div>
-            </div>
-            <div className="p-6 bg-white border-t border-slate-200 flex justify-between items-center shrink-0">
-               <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest flex items-center gap-2"><ShieldCheck size={14} className="text-emerald-500"/> Social Services Node Verified</p>
-               <button onClick={() => setActiveFile(null)} className="px-10 py-3 bg-[#1e419c] text-white rounded-xl font-medium text-[10px] uppercase tracking-widest shadow-xl">Close Viewer</button>
-            </div>
-         </div>
-      </div>
+        </div>
     );
   };
 
@@ -307,7 +355,10 @@ export const AdminBenefits: React.FC = () => {
                     <Banknote size={24} />
                   </div>
                   <div className="overflow-hidden">
-                    <h3 className="font-semibold text-slate-800 text-lg uppercase tracking-tight truncate">{app.userName}</h3>
+                    <h3 className="font-semibold text-slate-800 text-lg uppercase tracking-tight truncate">
+                        {app.userName} 
+                        <span className="text-[10px] text-slate-400 font-mono ml-2">ID: {users.find(u => u.id === app.userId)?.pwdIdNumber || app.formData?.controlNo || app.id}</span>
+                    </h3>
                     <p className="text-slate-500 font-medium text-[10px] uppercase tracking-widest flex items-center gap-1.5 mt-0.5">
                        <Clock size={10} /> Applied: {app.date}
                     </p>
@@ -373,10 +424,10 @@ export const AdminBenefits: React.FC = () => {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-[#1e419c] text-white text-[10px] font-medium uppercase tracking-[0.2em]">
-                  <th className="p-6">Application Date</th>
-                  <th className="p-6">Beneficiary Name</th>
-                  <th className="p-6">Benefit Program</th>
+                  <th className="p-6">Applied Date</th>
                   <th className="p-6">Status</th>
+                  <th className="p-6">Applicant Name</th>
+                  <th className="p-6">Mode</th>
                   <th className="p-6 text-right">Action</th>
                 </tr>
               </thead>
@@ -392,16 +443,25 @@ export const AdminBenefits: React.FC = () => {
                         <span className="text-xs text-slate-500 font-medium">{app.date}</span>
                       </td>
                       <td className="p-6">
-                        <p className="font-semibold text-slate-800 text-sm uppercase tracking-tight">{app.userName}</p>
-                      </td>
-                      <td className="p-6">
-                        <span className="px-2.5 py-1 rounded text-[9px] font-semibold uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-100">
-                          Cash Grant
+                        <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-[9px] font-semibold uppercase tracking-widest flex items-center gap-1.5 w-fit">
+                          <CheckCircle size={10} /> {app.status}
                         </span>
                       </td>
                       <td className="p-6">
-                        <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-[9px] font-semibold uppercase tracking-widest flex items-center gap-1.5 w-fit">
-                          <CheckCircle size={10} /> {app.status}
+                        <p className="font-semibold text-slate-800 text-sm uppercase tracking-tight">{app.userName}</p>
+                        <span className="text-[10px] text-slate-400 font-mono uppercase tracking-widest">ID: {users.find(u => u.id === app.userId)?.pwdIdNumber || app.formData?.controlNo || app.id}</span>
+                      </td>
+                      <td className="p-8">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
+                            app.formData?.isWalkIn 
+                                ? 'bg-purple-50 text-purple-600 border-purple-100' 
+                                : 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                        }`}>
+                            {app.formData?.isWalkIn ? (
+                                <><MapPin size={14} /> Walk-in</>
+                            ) : (
+                                <><Globe size={14} /> Online</>
+                            )}
                         </span>
                       </td>
                       <td className="p-6 text-right">
@@ -444,10 +504,10 @@ export const AdminBenefits: React.FC = () => {
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-[#1e419c] text-white text-[10px] font-medium uppercase tracking-[0.2em]">
-                    <th className="p-6">Date</th>
-                    <th className="p-6">Applicant</th>
-                    <th className="p-6">Type</th>
-                    <th className="p-6">Rejection Reason</th>
+                    <th className="p-6">Applied Date</th>
+                    <th className="p-6">Status</th>
+                    <th className="p-6">Applicant Name</th>
+                    <th className="p-6">Mode</th>
                     <th className="p-6 text-right">Action</th>
                   </tr>
                 </thead>
@@ -455,19 +515,31 @@ export const AdminBenefits: React.FC = () => {
                   {rejected.map(app => (
                     <tr key={app.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="p-6 font-medium text-xs text-slate-500">{app.date}</td>
-                      <td className="p-6 font-semibold text-slate-800 text-sm uppercase tracking-tight">{app.userName}</td>
                       <td className="p-6">
-                        <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded text-[9px] font-semibold uppercase tracking-widest">
-                          Cash Grant
+                        <span className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-100 rounded-full text-[9px] font-semibold uppercase tracking-widest flex items-center gap-1.5 w-fit">
+                          <XCircle size={10} /> {app.status}
                         </span>
                       </td>
                       <td className="p-6">
-                        <div className="bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 flex items-start gap-2 max-w-sm">
-                            <XCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
-                            <p className="text-xs text-red-700 font-medium italic leading-relaxed truncate">
+                        <p className="font-semibold text-slate-800 text-sm uppercase tracking-tight">{app.userName}</p>
+                        <div className="bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 flex items-start gap-2 max-w-sm mt-1">
+                            <p className="text-[10px] text-red-700 font-medium italic leading-relaxed truncate">
                                 {app.rejectionReason || 'Requirements incomplete'}
                             </p>
                         </div>
+                      </td>
+                      <td className="p-8">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
+                            app.formData?.isWalkIn 
+                                ? 'bg-purple-50 text-purple-600 border-purple-100' 
+                                : 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                        }`}>
+                            {app.formData?.isWalkIn ? (
+                                <><MapPin size={14} /> Walk-in</>
+                            ) : (
+                                <><Globe size={14} /> Online</>
+                            )}
+                        </span>
                       </td>
                       <td className="p-6 text-right">
                          <button onClick={() => setViewingApp(app)} className="text-[10px] font-medium uppercase text-primary-600 hover:underline">Review Detail</button>
@@ -577,17 +649,18 @@ export const AdminBenefits: React.FC = () => {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-[#1e419c] text-white text-[10px] font-medium uppercase tracking-[0.2em]">
+                  <th className="p-6">Date Generated</th>
+                  <th className="p-6">Status</th>
                   <th className="p-6">Beneficiary</th>
                   <th className="p-6">Amount</th>
-                  <th className="p-6">Status</th>
-                  <th className="p-6">Last Updated</th>
+                  <th className="p-6 text-center">Mode</th>
                   <th className="p-6 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {grantsForYear.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-20 text-center text-slate-400 font-medium uppercase tracking-[0.2em] text-xs">No records generated for {currentYear}</td>
+                    <td colSpan={6} className="p-20 text-center text-slate-400 font-medium uppercase tracking-[0.2em] text-xs">No records generated for {currentYear}</td>
                   </tr>
                 ) : (
                   grantsForYear
@@ -595,11 +668,7 @@ export const AdminBenefits: React.FC = () => {
                     .map(grant => (
                     <tr key={grant.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="p-6">
-                        <p className="font-semibold text-slate-800 text-sm uppercase tracking-tight">{grant.userName}</p>
-                        <p className="text-[10px] text-slate-400 font-medium">ID: {grant.userId}</p>
-                      </td>
-                      <td className="p-6">
-                        <span className="font-bold text-slate-700">₱{grant.amount.toLocaleString()}</span>
+                        <span className="text-xs text-slate-500 font-medium">{new Date(grant.dateGenerated).toLocaleDateString()}</span>
                       </td>
                       <td className="p-6">
                         <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${getStatusColor(grant.status)}`}>
@@ -607,7 +676,24 @@ export const AdminBenefits: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-6">
-                        <span className="text-xs text-slate-500 font-medium">{new Date(grant.dateUpdated).toLocaleDateString()}</span>
+                        <p className="font-semibold text-slate-800 text-sm uppercase tracking-tight">{grant.userName}</p>
+                        <p className="text-[10px] text-slate-400 font-medium">ID: {grant.userId}</p>
+                      </td>
+                      <td className="p-6">
+                        <span className="font-bold text-slate-700">₱{grant.amount.toLocaleString()}</span>
+                      </td>
+                      <td className="p-8 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
+                            grant.isWalkIn 
+                                ? 'bg-purple-50 text-purple-600 border-purple-100' 
+                                : 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                        }`}>
+                            {grant.isWalkIn ? (
+                                <><MapPin size={14} /> Walk-in</>
+                            ) : (
+                                <><Globe size={14} /> Online</>
+                            )}
+                        </span>
                       </td>
                       <td className="p-6 text-right">
                         <div className="flex justify-end gap-2">

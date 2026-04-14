@@ -77,8 +77,8 @@ const Footer = () => (
           className="h-16 w-auto drop-shadow-md"
         />
         <div className="flex flex-col">
-          <p className="uppercase tracking-tight font-semibold text-sm">Dakilang Lungsod ng San Juan</p>
-          <p className="italic text-[10px] opacity-80">Kalakhang Maynila</p>
+          <p className="uppercase tracking-tight font-semibold text-sm">Great City of San Juan</p>
+          <p className="italic text-[10px] opacity-80">Metro Manila</p>
         </div>
       </div>
 
@@ -190,7 +190,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <SubMenuItem label="Cash Grant Flow" active={currentPath === '/admin/benefits/cash-grant'} onClick={() => handleNavigate('/admin/benefits/cash-grant')} />
             </MenuGroup>
             <MenuGroup icon={MessageSquare} label="Client Feedback" onClick={() => handleNavigate('/admin/feedback')} isOpen={currentPath === '/admin/feedback'} />
-            <MenuGroup icon={CalendarIcon} label="Mga Kaganapan" onClick={() => handleNavigate('/admin/events')} isOpen={currentPath === '/admin/events'} />
+            <MenuGroup icon={CalendarIcon} label="Events" onClick={() => handleNavigate('/admin/events')} isOpen={currentPath === '/admin/events'} />
             <div className="pt-8 pb-2">
                 <div className="h-px bg-slate-100 w-full mb-4"></div>
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] px-4">Registry Reference</p>

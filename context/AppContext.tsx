@@ -288,7 +288,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, []);
 
   const login = async (username: string, password: string): Promise<User | null> => {
-    const mockUser = users.find(u => (u.username === username || u.email === username) && u.password === password);
+    const mockUser = users.find(u => 
+      (u.username === username || u.email === username || u.pwdIdNumber === username) && 
+      u.password === password
+    );
     if (mockUser) {
       setCurrentUser(mockUser);
       localStorage.setItem('osca_current_user', JSON.stringify(mockUser));
@@ -364,17 +367,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const existingMasterlist = masterlistRecords.find(m => m.id === app.userId || (m.name === app.userName && m.birthDate === app.formData?.birthDate));
       
       const isRegistration = app.type === ApplicationType.REGISTRATION;
-      const pwdId = isRegistration ? undefined : (existingUser?.pwdIdNumber || existingMasterlist?.pwdIdNumber || getNextPwdIdNumber());
+      const nextPwdId = existingUser?.pwdIdNumber || existingMasterlist?.pwdIdNumber || getNextPwdIdNumber();
       
       // Define updates based on application data
       const updates: any = {
         role: Role.CITIZEN,
-        pwdIdNumber: pwdId,
-        pwdIdIssueDate: isRegistration ? undefined : new Date().toISOString().split('T')[0],
-        pwdIdExpiryDate: isRegistration ? undefined : new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         registrationDate: new Date().toISOString().split('T')[0],
         isDeceased: false,
       };
+
+      // Only assign ID number and dates if it's NOT a registration
+      if (!isRegistration) {
+        updates.pwdIdNumber = nextPwdId;
+        updates.pwdIdIssueDate = new Date().toISOString().split('T')[0];
+        updates.pwdIdExpiryDate = new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      } else if (existingUser?.pwdIdNumber || existingMasterlist?.pwdIdNumber) {
+        // Keep existing ID if they already have one (e.g. re-registration)
+        updates.pwdIdNumber = existingUser?.pwdIdNumber || existingMasterlist?.pwdIdNumber;
+      }
 
       // Map formData to updates, only if they exist and are not empty
       const fieldMap: Record<string, string> = {
@@ -403,7 +413,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       
       // Add the rest of the PWD fields
       const pwdFields = [
-        'controlNo', 'dateApplied', 'officeUnit', 'causeOfDisability', 
+        'dateApplied', 'causeOfDisability', 
         'streetAddress', 'barangay', 'cityMunicipality', 'province', 
         'region', 'landline', 'mobileNumber', 'emailAddress',
         'emergencyContactPerson', 'emergencyContactNumber', 'highestEducation',
@@ -445,7 +455,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         
         return [{
           id: app.userId,
-          pwdIdNumber: pwdId,
+          pwdIdNumber: nextPwdId,
           type: 'PWD',
           name: app.userName,
           firstName: app.formData?.firstName,
@@ -493,7 +503,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!user) return;
 
     const existingMasterlist = masterlistRecords.find(m => m.id === app.userId);
-    const pwdId = user.pwdIdNumber || existingMasterlist?.pwdIdNumber || getNextPwdIdNumber();
+    const pwdId = user.pwdIdNumber || existingMasterlist?.pwdIdNumber;
+
+    if (!pwdId) {
+      console.error("Cannot issue ID: PWD ID Number has not been processed by the client yet.");
+      return;
+    }
 
     // Update user
     const updatedUser: User = {
@@ -543,6 +558,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           contactNumber: user.contactNumber || 'N/A',
           address: user.address || 'N/A',
           birthDate: user.birthDate,
+          isWalkIn: app.formData?.isWalkIn || false,
           avatarUrl: app.formData?.capturedImage || user.avatarUrl
         }, ...mPrev];
       }
@@ -590,16 +606,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return true;
     });
 
-    const newGrants: CashGrant[] = eligibleUsers.map(user => ({
-      id: `cg_${year}_${user.id}`,
-      userId: user.id,
-      userName: user.name,
-      amount: 3000,
-      year: year,
-      status: CashGrantStatus.ELIGIBLE,
-      dateGenerated: today.toISOString(),
-      dateUpdated: today.toISOString()
-    }));
+    const newGrants: CashGrant[] = eligibleUsers.map(user => {
+      const regApp = applications.find(a => a.userId === user.id && a.type === ApplicationType.REGISTRATION);
+      return {
+        id: `cg_${year}_${user.id}`,
+        userId: user.id,
+        userName: user.name,
+        amount: 3000,
+        year: year,
+        status: CashGrantStatus.ELIGIBLE,
+        dateGenerated: today.toISOString(),
+        dateUpdated: today.toISOString(),
+        isWalkIn: regApp?.formData?.isWalkIn || false
+      };
+    });
 
     setCashGrants(prev => [...newGrants, ...prev]);
   };

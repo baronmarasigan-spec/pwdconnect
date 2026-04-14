@@ -21,7 +21,7 @@ const Footer = () => (
           alt="Official Seal" 
           className="h-12 w-auto drop-shadow-md"
         />
-        <p className="uppercase tracking-tight">Dakilang Lungsod ng San Juan</p>
+        <p className="uppercase tracking-tight">Great City of San Juan</p>
       </div>
 
       <div className="hidden xl:block w-px h-4 bg-white/20"></div>
@@ -66,10 +66,10 @@ export const LandingPage: React.FC = () => {
           navigate('/admin/dashboard');
         }
       } else {
-        setError('Maling username o password.');
+        setError('Invalid username or password.');
       }
     } catch (err) {
-      setError('May error sa pag-login. Pakisubukang muli.');
+      setError('Login error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ export const LandingPage: React.FC = () => {
         <div className="w-full lg:w-1/2 space-y-6 animate-fade-in-up mt-8">
            <div className="flex gap-3">
               <img 
-                src="https://www.phoenix.com.ph/wp-content/uploads/2026/04/sanjuanlogo.png" 
+                src="https://www.phoenix.com.ph/wp-content/uploads/2025/12/Group-74.png" 
                 alt="Logos" 
                 className="h-16 md:h-20 w-auto object-contain"
               />
@@ -102,10 +102,10 @@ export const LandingPage: React.FC = () => {
               </h1>
               
               <div className="space-y-6 text-slate-600 font-normal text-base lg:text-lg leading-relaxed pt-2">
-                <p>Masaya kaming makita ka ulit 💙</p>
-                <p className="max-w-md">Mag-log in para ma-access ang mga serbisyo, updates, at support na ginawa para sa'yo.</p>
-                <p className="max-w-lg">Narito kami para gawing mas madali, ligtas, at accessible ang bawat hakbang—dahil mahalaga ka.</p>
-                <p className="font-bold text-slate-800 italic pt-4 text-lg tracking-tight">Mag-sign in na at sabay tayong magpatuloy.</p>
+                <p>We are happy to see you again 💙</p>
+                <p className="max-w-md">Log in to access services, updates, and support made for you.</p>
+                <p className="max-w-lg">We are here to make every step easier, safer, and more accessible—because you matter.</p>
+                <p className="font-bold text-slate-800 italic pt-4 text-lg tracking-tight">Sign in now and let's move forward together.</p>
               </div>
            </div>
         </div>
@@ -114,7 +114,7 @@ export const LandingPage: React.FC = () => {
         <div className="w-full lg:w-auto flex justify-end mt-12 lg:mt-0 animate-scale-up">
           <div className="bg-white rounded-xl shadow-[0_50px_100px_-20px_rgba(0,0,0,0.2),0_20px_40px_-10px_rgba(0,0,0,0.1)] overflow-hidden border border-slate-100/50 w-full lg:w-[480px]">
             <div className="p-10 lg:p-16">
-               <h2 className="text-4xl lg:text-5xl font-medium text-center text-osca_red mb-12">Mag-log in</h2>
+               <h2 className="text-4xl lg:text-5xl font-medium text-center text-osca_red mb-12">Log in</h2>
                
                <form onSubmit={handleSubmit} className="space-y-8">
                   {error && (
@@ -132,7 +132,7 @@ export const LandingPage: React.FC = () => {
                        onChange={(e) => setUsername(e.target.value)}
                        disabled={loading}
                        className="w-full border-b border-slate-200 px-1 py-1.5 focus:outline-none focus:border-[#1e419c] transition-colors bg-transparent placeholder:text-slate-300 text-slate-700 text-lg"
-                       placeholder="ilagay ang iyong username"
+                       placeholder="enter your username"
                      />
                   </div>
 
@@ -144,11 +144,11 @@ export const LandingPage: React.FC = () => {
                        onChange={(e) => setPassword(e.target.value)}
                        disabled={loading}
                        className="w-full border-b border-slate-200 px-1 py-1.5 focus:outline-none focus:border-[#1e419c] transition-colors bg-transparent placeholder:text-slate-300 text-slate-700 text-lg"
-                       placeholder="ilagay ang iyong password"
+                       placeholder="enter your password"
                      />
                      <div className="flex justify-end pr-1 mt-2">
                         <button type="button" className="text-[10px] text-slate-400 hover:text-slate-600 italic">
-                          Nakalimutan ang password?
+                          Forgot password?
                         </button>
                      </div>
                   </div>
@@ -165,7 +165,7 @@ export const LandingPage: React.FC = () => {
                   </div>
 
                   <div className="text-center text-sm text-slate-400 mt-10">
-                     Wala ka pang account? <button type="button" onClick={() => navigate('/register')} className="text-osca_red font-bold underline ml-1 hover:text-red-700 transition-colors">Mag-rehistro dito</button>
+                     Don't have an account? <button type="button" onClick={() => navigate('/register')} className="text-osca_red font-bold underline ml-1 hover:text-red-700 transition-colors">Register here</button>
                   </div>
                </form>
             </div>

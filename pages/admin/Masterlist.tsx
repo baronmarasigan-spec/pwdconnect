@@ -6,7 +6,7 @@ import { IDCard } from '../../components/IDCard';
 import { 
   Search, Download, X, ShieldCheck, User as UserIcon, 
   MapPin, Phone, Mail, Eye, EyeOff, FileText, 
-  RefreshCw, Database, Globe, Activity, CloudOff, ShieldAlert, Calendar, UserCircle, Briefcase, Home, CreditCard, Save
+  RefreshCw, Database, Globe, Activity, CloudOff, ShieldAlert, Calendar, UserCircle, Briefcase, Home, CreditCard, Save, MapPinned
 } from 'lucide-react';
 
 const calculateAge = (birthDate: string): number => {
@@ -315,10 +315,10 @@ export const Masterlist: React.FC = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#1e419c] text-white text-[9px] font-bold uppercase tracking-[0.2em]">
-                <th className="p-6 whitespace-nowrap border-b border-white/10">PWD ID Number</th>
+                <th className="p-6 whitespace-nowrap border-b border-white/10">Applied Date</th>
+                <th className="p-6 whitespace-nowrap border-b border-white/10">Status</th>
                 <th className="p-6 whitespace-nowrap border-b border-white/10">Full Name</th>
-                <th className="p-6 whitespace-nowrap border-b border-white/10">Type of Disability</th>
-                <th className="p-6 whitespace-nowrap border-b border-white/10">Record Status</th>
+                <th className="p-6 whitespace-nowrap border-b border-white/10">Mode</th>
                 <th className="p-6 text-right whitespace-nowrap border-b border-white/10">Action</th>
               </tr>
             </thead>
@@ -332,18 +332,33 @@ export const Masterlist: React.FC = () => {
                 return (
                   <tr key={record.id || idx} className="hover:bg-slate-50/80 transition-colors group">
                     <td className="p-6 border-b border-slate-100">
-                        <span className="font-mono text-[11px] font-bold text-slate-600 tracking-wider uppercase whitespace-nowrap">
-                          {record.pwdIdNumber || record.id}
+                        <span className="text-xs font-medium text-slate-600 flex items-center gap-2">
+                            <Calendar size={14} className="text-slate-300" /> {record.dateApplied || '---'}
                         </span>
                     </td>
-                    <td className="p-6 border-b border-slate-100">
-                      <span className="font-bold text-slate-900 uppercase tracking-tight text-xs whitespace-nowrap">{fullName}</span>
-                    </td>
-                    <td className="p-6 text-[11px] font-bold text-slate-500 uppercase whitespace-nowrap border-b border-slate-100">{record.typeOfDisability || record.disabilityType || '---'}</td>
                     <td className="p-6 border-b border-slate-100">
                       <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest border whitespace-nowrap ${statusColor}`}>
                         {record.status}
                       </span>
+                    </td>
+                    <td className="p-6 border-b border-slate-100">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-900 uppercase tracking-tight text-xs whitespace-nowrap">{fullName}</span>
+                        <span className="text-[10px] font-mono text-slate-400 mt-1 uppercase tracking-widest">ID: {record.pwdIdNumber || record.id}</span>
+                      </div>
+                    </td>
+                    <td className="p-8 border-b border-slate-100">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
+                            record.isWalkIn 
+                                ? 'bg-purple-50 text-purple-600 border-purple-100' 
+                                : 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                        }`}>
+                            {record.isWalkIn ? (
+                                <><MapPin size={14} /> Walk-in</>
+                            ) : (
+                                <><Globe size={14} /> Online</>
+                            )}
+                        </span>
                     </td>
                     <td className="p-6 text-right border-b border-slate-100">
                       <button 

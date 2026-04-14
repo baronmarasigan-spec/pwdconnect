@@ -40,6 +40,7 @@ export interface CashGrant {
   status: CashGrantStatus;
   dateGenerated: string;
   dateUpdated: string;
+  isWalkIn?: boolean;
   remarks?: string;
 }
 
@@ -115,6 +116,9 @@ export interface User {
   fatherName?: string;
   motherName?: string;
   guardianName?: string;
+  physicianName?: string;
+  physicianLicense?: string;
+  governmentIds?: string[];
 }
 
 export interface Application {
@@ -195,6 +199,9 @@ export interface Application {
     fatherName?: string;
     motherName?: string;
     guardianName?: string;
+    physicianName?: string;
+    physicianLicense?: string;
+    governmentIds?: string[];
   };
   user?: User; // Added for convenience in UI
 }
@@ -214,6 +221,7 @@ export interface Complaint {
 export interface RegistryRecord {
   id: string; 
   type: 'LCR' | 'PWD';
+  pwdIdNumber?: string;
   firstName: string;
   middleName?: string;
   lastName: string;
@@ -233,6 +241,7 @@ export interface RegistryRecord {
   isRegistered: boolean; 
   isDeceased?: boolean;
   isSenior?: boolean;
+  isWalkIn?: boolean;
   avatarUrl?: string; // Added for visual identification
   disabilityType?: string; // Added for PWD
 }
@@ -241,7 +250,7 @@ export interface EventItem {
   id: string;
   title: string;
   date: string;
-  image: string;
+  image?: string;
   createdAt?: any;
 }
 

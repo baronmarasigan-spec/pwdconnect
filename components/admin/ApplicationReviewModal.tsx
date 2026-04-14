@@ -47,12 +47,128 @@ export const ApplicationReviewModal: React.FC<ApplicationReviewModalProps> = ({
         first_name: app.formData?.firstName || '',
         last_name: app.formData?.lastName || '',
         email: app.formData?.email || '',
-        contact_number: app.formData?.contactNumber || ''
+        contact_number: app.formData?.contactNumber || '',
+        username: app.formData?.username || '',
+        password: app.formData?.password || ''
     });
 
     const applicantUser = useMemo(() => users.find(u => u.id === app.userId), [users, app.userId]);
     const [isSaving, setIsSaving] = useState(false);
     const [isClarifying, setIsClarifying] = useState(false);
+    const [activeFile, setActiveFile] = useState<string | null>(null);
+
+    const handleDownloadFile = (fileName: string) => {
+        const isPdf = fileName.toLowerCase().endsWith('.pdf');
+        let blob: Blob;
+        
+        if (isPdf) {
+            // Minimal valid PDF
+            const pdfContent = `%PDF-1.1
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /Resources << >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 21 >>
+stream
+BT /F1 12 Tf ET
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f
+0000000009 00000 n
+0000000052 00000 n
+0000000101 00000 n
+0000000178 00000 n
+trailer
+<< /Size 5 /Root 1 0 R >>
+startxref
+249
+%%EOF`;
+            blob = new Blob([pdfContent], { type: 'application/pdf' });
+        } else {
+            blob = new Blob([`Mock data for ${fileName}`], { type: 'text/plain' });
+        }
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    const DocumentViewer = () => {
+        if (!activeFile) return null;
+        const isImage = activeFile.match(/\.(jpg|jpeg|png|gif)$/i);
+        const isPdf = activeFile.toLowerCase().endsWith('.pdf');
+        
+        return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={() => setActiveFile(null)} />
+                <div className="bg-white w-full max-w-4xl h-[80vh] rounded-[2.5rem] shadow-2xl relative z-20 overflow-hidden flex flex-col animate-scale-up">
+                    <div className="bg-[#1e419c] p-6 text-white flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <FileText size={20} />
+                            <span className="font-medium uppercase tracking-widest text-xs">{activeFile}</span>
+                        </div>
+                        <button onClick={() => setActiveFile(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                            <X size={20} />
+                        </button>
+                    </div>
+                    <div className="flex-1 bg-slate-100 flex items-center justify-center p-10 overflow-auto">
+                        {isImage ? (
+                            <img 
+                                src={`https://picsum.photos/seed/${activeFile}/1200/800`} 
+                                alt={activeFile} 
+                                className="max-w-full max-h-full object-contain rounded-xl shadow-lg"
+                                referrerPolicy="no-referrer"
+                            />
+                        ) : isPdf ? (
+                            <div className="w-full h-full bg-white rounded-3xl shadow-inner border border-slate-200 flex flex-col items-center justify-center text-slate-400 font-medium uppercase tracking-widest">
+                                <FileText size={64} className="mb-4 text-[#1e419c] opacity-20" />
+                                <p>PDF Preview Active</p>
+                                <p className="text-[10px] mt-2 opacity-60">Secure Document Node Connection Established</p>
+                                <button 
+                                    onClick={() => handleDownloadFile(activeFile)}
+                                    className="mt-6 px-6 py-2 bg-[#1e419c] text-white rounded-lg text-[10px] tracking-widest"
+                                >
+                                    Open in New Tab to View
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="w-full h-full bg-white rounded-3xl shadow-inner border border-slate-200 flex items-center justify-center text-slate-400 font-medium uppercase tracking-widest">
+                                <div className="text-center">
+                                    <FileText size={48} className="mx-auto mb-4 opacity-20" />
+                                    Document Preview Mode
+                                    <p className="text-[10px] mt-2 opacity-60">Secure PDF/Doc Viewer Active</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <div className="p-6 bg-white border-t border-slate-200 flex justify-between items-center shrink-0">
+                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest flex items-center gap-2">
+                            <ShieldCheck size={14} className="text-emerald-500"/> Verified Document Source
+                        </p>
+                        <button 
+                            onClick={() => handleDownloadFile(activeFile)}
+                            className="px-10 py-3 bg-[#1e419c] text-white rounded-xl font-medium text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2"
+                        >
+                            <Download size={14} /> Download Copy
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     const verificationResults = useMemo(() => {
         if (!app.formData) return null;
@@ -81,7 +197,14 @@ export const ApplicationReviewModal: React.FC<ApplicationReviewModalProps> = ({
             setViewingApp(prev => prev ? { 
                 ...prev, 
                 userName: `${editData.first_name} ${editData.last_name}`,
-                formData: prev.formData ? { ...prev.formData, ...editData, firstName: editData.first_name, lastName: editData.last_name } : undefined
+                formData: prev.formData ? { 
+                    ...prev.formData, 
+                    ...editData, 
+                    firstName: editData.first_name, 
+                    lastName: editData.last_name,
+                    username: editData.username,
+                    password: editData.password
+                } : undefined
             } : null);
         }
         setIsSaving(false);
@@ -118,6 +241,7 @@ export const ApplicationReviewModal: React.FC<ApplicationReviewModalProps> = ({
            </div>
 
            <div className="flex-1 overflow-y-auto p-10 custom-scrollbar space-y-10 bg-slate-50">
+              <DocumentViewer />
               {actionError && (
                   <div className="bg-red-50 border-2 border-red-100 p-6 rounded-[2rem] flex items-start gap-4 animate-shake">
                     <ShieldAlert className="text-red-600 shrink-0" size={24} />
@@ -203,18 +327,10 @@ export const ApplicationReviewModal: React.FC<ApplicationReviewModalProps> = ({
                             />
                         </div>
                     </div>
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        <div>
-                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Control No.</label>
-                            <p className="font-medium text-slate-900">{app.formData?.controlNo || '---'}</p>
-                        </div>
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         <div>
                             <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Date Applied</label>
                             <p className="font-medium text-slate-900">{app.formData?.dateApplied || '---'}</p>
-                        </div>
-                        <div className="lg:col-span-2">
-                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Office / Unit</label>
-                            <p className="font-medium text-slate-900 uppercase">{app.formData?.officeUnit || '---'}</p>
                         </div>
                         <div className="lg:col-span-2">
                             <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Full Legal Name</label>
@@ -242,6 +358,38 @@ export const ApplicationReviewModal: React.FC<ApplicationReviewModalProps> = ({
                     </div>
                 </div>
               </div>
+
+              {app.documents && app.documents.length > 0 && (
+                <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm space-y-6 animate-fade-in">
+                    <h4 className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50 pb-3 flex items-center gap-2">
+                        <FileText size={14} className="text-blue-500" /> Submitted Documents
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {app.documents.map((doc, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl group hover:bg-white transition-all shadow-sm">
+                                <div className="flex items-center gap-3 overflow-hidden">
+                                    <File size={18} className="text-slate-400" />
+                                    <span className="text-xs font-medium text-slate-700 truncate max-w-[200px]">{doc}</span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button 
+                                    onClick={() => setActiveFile(doc)}
+                                    className="p-2 text-slate-400 hover:text-primary-600 transition-all"
+                                  >
+                                    <Eye size={16}/>
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDownloadFile(doc)}
+                                    className="p-2 text-slate-400 hover:text-primary-600 transition-all"
+                                  >
+                                    <Download size={16}/>
+                                  </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+              )}
 
               <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm space-y-6">
                 <h4 className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50 pb-3 flex items-center gap-2">
@@ -333,77 +481,114 @@ export const ApplicationReviewModal: React.FC<ApplicationReviewModalProps> = ({
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <div>
-                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Highest Education</label>
+                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Educational Attainment</label>
                         <p className="font-medium text-slate-900 uppercase">{app.formData?.highestEducation || '---'}</p>
                     </div>
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Employment Status</label>
                         <p className="font-medium text-slate-900 uppercase">{app.formData?.employmentStatus || '---'}</p>
                     </div>
-                    <div>
-                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Employment Type</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.employmentType || '---'}</p>
-                    </div>
-                    <div>
-                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Employment Category</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.employmentCategory || '---'}</p>
-                    </div>
-                    <div>
-                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Occupation</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.occupation || '---'}</p>
-                    </div>
+                    {app.formData?.employmentStatus === 'Employed' && (
+                        <>
+                            <div>
+                                <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Employment Type</label>
+                                <p className="font-medium text-slate-900 uppercase">{app.formData?.employmentType || '---'}</p>
+                            </div>
+                            <div>
+                                <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Employment Category</label>
+                                <p className="font-medium text-slate-900 uppercase">{app.formData?.employmentCategory || '---'}</p>
+                            </div>
+                        </>
+                    )}
+                    {app.formData?.employmentStatus !== 'Unemployed' && (
+                        <div>
+                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Occupation</label>
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.occupation || '---'}</p>
+                        </div>
+                    )}
                 </div>
               </div>
 
               <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm space-y-6">
                 <h4 className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50 pb-3 flex items-center gap-2">
-                    <UserIcon size={14} className="text-orange-500" /> Organization Information
+                    <ShieldCheck size={14} className="text-emerald-500" /> Certifying Physician
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
-                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Organization Name</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.orgName || '---'}</p>
+                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Name of Certifying Physician</label>
+                        <p className="font-medium text-slate-900 uppercase">{app.formData?.physicianName || '---'}</p>
                     </div>
                     <div>
-                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Contact Person</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.orgContactPerson || '---'}</p>
-                    </div>
-                    <div className="md:col-span-2">
-                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Organization Address</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.orgAddress || '---'}</p>
-                    </div>
-                    <div>
-                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Contact No.</label>
-                        <p className="font-medium text-slate-900">{app.formData?.orgContactNo || '---'}</p>
+                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">License No.</label>
+                        <p className="font-medium text-slate-900 uppercase">{app.formData?.physicianLicense || '---'}</p>
                     </div>
                 </div>
               </div>
+
+              {app.formData?.employmentStatus === 'Employed' && (
+                <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm space-y-6">
+                    <h4 className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50 pb-3 flex items-center gap-2">
+                        <UserIcon size={14} className="text-orange-500" /> Organization Information
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Organization Name</label>
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.orgName || '---'}</p>
+                        </div>
+                        <div>
+                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Contact Person</label>
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.orgContactPerson || '---'}</p>
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Organization Address</label>
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.orgAddress || '---'}</p>
+                        </div>
+                        <div>
+                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Contact No.</label>
+                            <p className="font-medium text-slate-900">{app.formData?.orgContactNo || '---'}</p>
+                        </div>
+                    </div>
+                </div>
+              )}
 
               <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm space-y-6">
                 <h4 className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50 pb-3 flex items-center gap-2">
                     <FileText size={14} className="text-slate-600" /> Government IDs
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <div>
-                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">SSS Number</label>
-                        <p className="font-medium text-slate-900 font-mono">{app.formData?.sssNumber || '---'}</p>
-                    </div>
-                    <div>
-                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">GSIS Number</label>
-                        <p className="font-medium text-slate-900 font-mono">{app.formData?.gsisNumber || '---'}</p>
-                    </div>
-                    <div>
-                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Pag-IBIG Number</label>
-                        <p className="font-medium text-slate-900 font-mono">{app.formData?.pagIbigNumber || '---'}</p>
-                    </div>
-                    <div>
-                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">PSN Number</label>
-                        <p className="font-medium text-slate-900 font-mono">{app.formData?.psnNumber || '---'}</p>
-                    </div>
-                    <div>
-                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">PhilHealth Number</label>
-                        <p className="font-medium text-slate-900 font-mono">{app.formData?.philHealthNumber || '---'}</p>
-                    </div>
+                    {app.formData?.sssNumber && (
+                        <div>
+                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">SSS Number</label>
+                            <p className="font-medium text-slate-900 font-mono">{app.formData?.sssNumber}</p>
+                        </div>
+                    )}
+                    {app.formData?.gsisNumber && (
+                        <div>
+                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">GSIS Number</label>
+                            <p className="font-medium text-slate-900 font-mono">{app.formData?.gsisNumber}</p>
+                        </div>
+                    )}
+                    {app.formData?.pagIbigNumber && (
+                        <div>
+                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Pag-IBIG Number</label>
+                            <p className="font-medium text-slate-900 font-mono">{app.formData?.pagIbigNumber}</p>
+                        </div>
+                    )}
+                    {app.formData?.psnNumber && (
+                        <div>
+                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">PSN Number</label>
+                            <p className="font-medium text-slate-900 font-mono">{app.formData?.psnNumber}</p>
+                        </div>
+                    )}
+                    {app.formData?.philHealthNumber && (
+                        <div>
+                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">PhilHealth Number</label>
+                            <p className="font-medium text-slate-900 font-mono">{app.formData?.philHealthNumber}</p>
+                        </div>
+                    )}
+                    {!app.formData?.sssNumber && !app.formData?.gsisNumber && !app.formData?.pagIbigNumber && !app.formData?.psnNumber && !app.formData?.philHealthNumber && (
+                        <p className="text-sm text-slate-400 italic col-span-full">No Government IDs provided</p>
+                    )}
                 </div>
               </div>
 
@@ -427,28 +612,39 @@ export const ApplicationReviewModal: React.FC<ApplicationReviewModalProps> = ({
                 </div>
               </div>
 
-              {app.documents && app.documents.length > 0 && (
-                <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm space-y-6">
-                    <h4 className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50 pb-3 flex items-center gap-2">
-                        <FileText size={14} className="text-blue-500" /> Submitted Documents
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {app.documents.map((doc, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl group hover:bg-white transition-all shadow-sm">
-                                <div className="flex items-center gap-3 overflow-hidden">
-                                    <File size={18} className="text-slate-400" />
-                                    <span className="text-xs font-medium text-slate-700 truncate max-w-[200px]">{doc}</span>
-                                </div>
-                                <div className="flex gap-2">
-                                  <button className="p-2 text-slate-400 hover:text-primary-600 transition-all"><Eye size={16}/></button>
-                                  <button className="p-2 text-slate-400 hover:text-primary-600 transition-all"><Download size={16}/></button>
-                                </div>
-                            </div>
-                        ))}
+              <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm space-y-6">
+                <h4 className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50 pb-3 flex items-center gap-2">
+                    <Fingerprint size={14} className="text-slate-600" /> Account Security
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Username</label>
+                        {isEditMode ? (
+                            <input 
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 font-medium outline-none" 
+                                value={editData.username} 
+                                onChange={(e) => setEditData({...editData, username: e.target.value})} 
+                            />
+                        ) : (
+                            <p className="font-medium text-slate-900">{app.formData?.username || '---'}</p>
+                        )}
+                    </div>
+                    <div>
+                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Password</label>
+                        {isEditMode ? (
+                            <input 
+                                type="password"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 font-medium outline-none" 
+                                value={editData.password} 
+                                onChange={(e) => setEditData({...editData, password: e.target.value})} 
+                            />
+                        ) : (
+                            <p className="font-medium text-slate-900">••••••••</p>
+                        )}
                     </div>
                 </div>
-              )}
-           </div>
+              </div>
+            </div>
 
            <div className="p-8 bg-white border-t border-slate-100 flex justify-end gap-3 shrink-0">
                {app.status === ApplicationStatus.PENDING || app.status === ApplicationStatus.CLARIFICATION ? (

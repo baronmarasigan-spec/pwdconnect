@@ -8,7 +8,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { IDCard } from '../../components/IDCard';
 
 export const CitizenID: React.FC = () => {
-  const { currentUser, addApplication, applications, getNextPwdIdNumber } = useApp();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { currentUser, addApplication, applications, getNextPwdIdNumber, updateUser } = useApp();
   const { t, language, setLanguage } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -25,13 +26,37 @@ export const CitizenID: React.FC = () => {
     (a.type === ApplicationType.ID_NEW || a.type === ApplicationType.ID_RENEWAL || a.type === ApplicationType.ID_REPLACEMENT)
   );
 
+  const approvedNoIdApp = applications.find(a => 
+    a.userId === currentUser?.id && 
+    a.status === ApplicationStatus.APPROVED &&
+    !currentUser?.pwdIdNumber &&
+    (a.type === ApplicationType.ID_NEW)
+  );
+
   const getFieldClass = (fieldName: string) => {
     const hasError = errors.includes(fieldName);
-    return `w-full bg-slate-50 border ${hasError ? 'border-red-500 bg-red-50/30' : 'border-slate-200'} rounded-lg px-4 py-2.5 text-sm font-normal uppercase text-[#2d2d2d] shadow-sm transition-all`;
+    return `w-full bg-slate-50 border ${hasError ? 'border-red-500 bg-red-50/30' : 'border-slate-200'} rounded-lg px-4 py-2.5 text-sm font-normal text-[#2d2d2d] shadow-sm transition-all focus:ring-2 focus:ring-[#1e419c]/20 focus:border-[#1e419c] outline-none`;
   };
 
+  const GOV_IDS = [
+    'Passport',
+    'Driver\'s License',
+    'SSS ID / UMID',
+    'GSIS ID',
+    'PhilHealth ID',
+    'Voter\'s ID',
+    'Postal ID',
+    'PRC ID',
+    'NBI Clearance',
+    'Barangay ID',
+    'Senior Citizen ID'
+  ];
+
   // Form State
-  const [files, setFiles] = useState<string[]>([]);
+  const [disabilityCert, setDisabilityCert] = useState<string | null>(null);
+  const [residencyCert, setResidencyCert] = useState<string | null>(null);
+  const [govIdFile, setGovIdFile] = useState<string | null>(null);
+  
   const [idFormData, setIdFormData] = useState({
     firstName: '',
     middleName: '',
@@ -48,6 +73,7 @@ export const CitizenID: React.FC = () => {
     emergencyContactNumber: '',
     joinFederation: false,
     disabilityType: '',
+    governmentIds: [] as string[],
     capturedImage: undefined as string | undefined
   });
   
@@ -86,7 +112,7 @@ export const CitizenID: React.FC = () => {
       }
     } catch (err) {
       console.error("Camera access denied", err);
-      setCameraError("Hindi ma-access ang camera. Pakisuri ang iyong browser permissions.");
+      setCameraError("Cannot access camera. Please check your browser permissions.");
     }
   };
 
@@ -125,10 +151,21 @@ export const CitizenID: React.FC = () => {
         emergencyContactNumber: currentUser.emergencyContactNumber || '',
         joinFederation: currentUser.joinFederation || false,
         disabilityType: currentUser.disabilityType || '',
+        governmentIds: currentUser.governmentIds || [],
         capturedImage: undefined
       });
     }
   }, [currentUser, formMode]);
+
+  const handleGovIdToggle = (id: string) => {
+    setIdFormData(prev => {
+      const current = prev.governmentIds || [];
+      const updated = current.includes(id)
+        ? current.filter(i => i !== id)
+        : [...current, id];
+      return { ...prev, governmentIds: updated };
+    });
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
@@ -153,7 +190,6 @@ export const CitizenID: React.FC = () => {
       const dataUrl = canvasRef.current.toDataURL('image/jpeg');
       setCapturedImage(dataUrl);
       setIdFormData(prev => ({ ...prev, capturedImage: dataUrl }));
-      setFiles(prev => [...prev.filter(f => !f.includes('Bio_Photo')), `PWD_Biometric_Photo_${Date.now()}.jpg`]);
       setErrors(prev => prev.filter(err => err !== 'capturedImage'));
       setIsCameraOpen(false);
       stopCamera();
@@ -172,12 +208,14 @@ export const CitizenID: React.FC = () => {
   };
 
   const validateStep2 = () => {
-    if (files.length === 0) {
-      setErrors(['files']);
-      return false;
-    }
-    setErrors([]);
-    return true;
+    const newErrors: string[] = [];
+    if (!disabilityCert) newErrors.push('disabilityCert');
+    if (!residencyCert) newErrors.push('residencyCert');
+    if (!govIdFile) newErrors.push('govIdFile');
+    if (idFormData.governmentIds.length === 0) newErrors.push('governmentIds');
+    
+    setErrors(newErrors);
+    return newErrors.length === 0;
   };
 
   const handleSubmit = () => {
@@ -186,16 +224,69 @@ export const CitizenID: React.FC = () => {
       return;
     }
     const type = formMode || ApplicationType.ID_NEW;
+    
+    // Combine files for submission
+    const allFiles = [disabilityCert, residencyCert, govIdFile].filter(Boolean) as string[];
+    
     addApplication({
       userId: currentUser!.id,
       userName: `${idFormData.firstName} ${idFormData.lastName}`,
       type: type,
       description: `Official PWD ID Application. Disability: ${idFormData.disabilityType}. Address: ${idFormData.address}.`,
-      documents: files,
+      documents: allFiles,
       formData: { ...idFormData }
     });
     navigate('/citizen/dashboard');
   };
+
+  const handleProcessId = async () => {
+    if (!currentUser) return;
+    setIsProcessing(true);
+    
+    // Simulate processing delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const newId = getNextPwdIdNumber();
+    updateUser(currentUser.id, {
+      pwdIdNumber: newId,
+      pwdIdIssueDate: new Date().toISOString().split('T')[0],
+      pwdIdExpiryDate: new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    });
+    
+    setIsProcessing(false);
+  };
+
+  if (approvedNoIdApp && !hasIssuedID) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center animate-fade-in">
+        <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-8 shadow-inner">
+          <CheckCircle size={48} />
+        </div>
+        <h2 className="text-3xl font-normal text-slate-900 mb-4 tracking-tight uppercase">Your Application is Approved!</h2>
+        <p className="text-slate-600 max-w-md mb-10 text-lg leading-relaxed font-normal">
+          Your PWD registration is approved. You can now process your official PWD ID number.
+        </p>
+        
+        <button 
+          onClick={handleProcessId}
+          disabled={isProcessing}
+          className="px-12 py-4 bg-emerald-600 text-white rounded-xl font-bold text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-700 transition-all active:scale-95 flex items-center gap-3 disabled:opacity-70"
+        >
+          {isProcessing ? (
+            <>
+              <RefreshCw size={18} className="animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <CreditCard size={18} />
+              Process my PWD ID
+            </>
+          )}
+        </button>
+      </div>
+    );
+  }
 
   if (pendingIdApp && !hasIssuedID) {
     return (
@@ -203,15 +294,15 @@ export const CitizenID: React.FC = () => {
         <div className="w-24 h-24 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-8 shadow-inner">
           <RefreshCw size={48} className="animate-spin" />
         </div>
-        <h2 className="text-3xl font-normal text-slate-900 mb-4 tracking-tight uppercase">Kasalukuyang Pinoproseso</h2>
+        <h2 className="text-3xl font-normal text-slate-900 mb-4 tracking-tight uppercase">Currently Processing</h2>
         <p className="text-slate-600 max-w-md mb-10 text-lg leading-relaxed font-normal">
-          Ang iyong aplikasyon para sa PWD ID ay kasalukuyang sinusuri ng aming admin. Makakatanggap ka ng abiso kapag ito ay aprobado na.
+          Your PWD ID application is currently being reviewed by our admin. You will receive a notification once it is approved.
         </p>
         <button 
           onClick={() => navigate('/citizen/dashboard')}
           className="px-12 py-4 bg-[#1e419c] text-white rounded-xl font-bold text-xs uppercase tracking-[0.2em] shadow-xl hover:opacity-90 transition-all active:scale-95"
         >
-          Bumalik sa Dashboard
+          Back to Dashboard
         </button>
       </div>
     );
@@ -367,16 +458,112 @@ export const CitizenID: React.FC = () => {
         {step === 2 && (
              <div className="bg-white rounded-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100 overflow-hidden">
                 <div className="bg-[#1e419c] px-8 py-6 text-white flex justify-between items-center">
-                    <div className="flex items-center gap-3"><FileText size={24} className="text-white/40" /><h2 className="text-xl font-normal uppercase tracking-widest">Medical Documentation</h2></div>
+                    <div className="flex items-center gap-3"><FileText size={24} className="text-white/40" /><h2 className="text-xl font-normal uppercase tracking-widest">Requirements & Documentation</h2></div>
                 </div>
-                <div className="p-6 space-y-6">
-                    <div className="bg-blue-50 p-6 rounded-lg border border-blue-100"><p className="text-xs font-normal text-blue-800">Please attach a copy of your Medical Certificate or clinical abstract indicating your disability category.</p></div>
-                    <div className={`border-2 border-dashed ${errors.includes('files') ? 'border-red-500 bg-red-50' : 'border-slate-200 bg-slate-50'} rounded-lg p-10 flex flex-col items-center justify-center group hover:bg-slate-100 cursor-pointer relative shadow-inner transition-all`}>
-                         <input type="file" multiple onChange={(e) => { if(e.target.files) setFiles([...files, ...Array.from(e.target.files).map((f: any) => f.name)]); setErrors(prev => prev.filter(err => err !== 'files')); }} className="absolute inset-0 opacity-0 cursor-pointer" />
-                         <Upload size={32} className={`${errors.includes('files') ? 'text-red-300' : 'text-slate-300'} mb-2`} /><p className={`font-normal ${errors.includes('files') ? 'text-red-400' : 'text-slate-400'}`}>Upload Certificate</p>
+                <div className="p-6 space-y-8">
+                    <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 space-y-3">
+                        <h3 className="text-sm font-bold text-blue-900 uppercase tracking-wider">Required Documents:</h3>
+                        <ul className="space-y-2">
+                            <li className="flex items-start gap-2 text-xs text-blue-800">
+                                <div className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                                <span><strong>Certificate of Disability</strong> (from San Juan Medical Center)</span>
+                            </li>
+                            <li className="flex items-start gap-2 text-xs text-blue-800">
+                                <div className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                                <span><strong>Certificate of Residency</strong> (from your Barangay - Purpose: For PWD ID Requirement)</span>
+                            </li>
+                            <li className="flex items-start gap-2 text-xs text-blue-800">
+                                <div className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                                <span><strong>Government-Issued ID</strong> (Please select below)</span>
+                            </li>
+                        </ul>
                     </div>
-                    {errors.includes('files') && <p className="text-[10px] text-red-500 font-medium uppercase text-center">At least one document is required</p>}
-                    <div className="flex justify-end gap-3 pt-6"><button onClick={() => setStep(1)} className="px-8 py-3 text-slate-400 font-normal uppercase tracking-widest text-[10px]">Back</button><button onClick={() => validateStep2() && setStep(3)} className="px-10 py-3 bg-[#1e419c] text-white rounded-lg font-normal uppercase tracking-widest text-[10px] shadow-md">Continue</button></div>
+
+                    <div className="space-y-4">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">Select Government IDs to Provide <span className="text-red-500">*</span></label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            {GOV_IDS.map(id => (
+                                <button
+                                    key={id}
+                                    type="button"
+                                    onClick={() => handleGovIdToggle(id)}
+                                    className={`px-4 py-3 rounded-xl border text-[10px] font-bold uppercase tracking-wider transition-all text-left flex items-center justify-between ${
+                                        idFormData.governmentIds.includes(id)
+                                            ? 'bg-[#1e419c] border-[#1e419c] text-white shadow-md'
+                                            : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+                                    }`}
+                                >
+                                    {id}
+                                    {idFormData.governmentIds.includes(id) && <CheckCircle size={14} />}
+                                </button>
+                            ))}
+                        </div>
+                        {errors.includes('governmentIds') && <p className="text-[9px] text-red-500 font-medium uppercase mt-1 ml-1">Please select at least one Government ID</p>}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Disability Certificate */}
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">Certificate of Disability <span className="text-red-500">*</span></label>
+                            <div className={`border-2 border-dashed ${errors.includes('disabilityCert') ? 'border-red-500 bg-red-50' : 'border-slate-200 bg-slate-50'} rounded-lg p-4 flex flex-col items-center justify-center group hover:bg-slate-100 cursor-pointer relative shadow-inner transition-all h-32`}>
+                                <input type="file" onChange={(e) => { if(e.target.files?.[0]) { setDisabilityCert(e.target.files[0].name); setErrors(prev => prev.filter(err => err !== 'disabilityCert')); } }} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                {disabilityCert ? (
+                                    <div className="flex flex-col items-center text-emerald-600">
+                                        <FileCheck size={24} />
+                                        <span className="text-[10px] mt-1 font-medium truncate max-w-full px-2">{disabilityCert}</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Upload size={24} className={`${errors.includes('disabilityCert') ? 'text-red-300' : 'text-slate-300'} mb-1`} />
+                                        <p className={`text-[10px] text-center ${errors.includes('disabilityCert') ? 'text-red-400' : 'text-slate-400'}`}>Upload Certificate</p>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Residency Certificate */}
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">Certificate of Residency <span className="text-red-500">*</span></label>
+                            <div className={`border-2 border-dashed ${errors.includes('residencyCert') ? 'border-red-500 bg-red-50' : 'border-slate-200 bg-slate-50'} rounded-lg p-4 flex flex-col items-center justify-center group hover:bg-slate-100 cursor-pointer relative shadow-inner transition-all h-32`}>
+                                <input type="file" onChange={(e) => { if(e.target.files?.[0]) { setResidencyCert(e.target.files[0].name); setErrors(prev => prev.filter(err => err !== 'residencyCert')); } }} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                {residencyCert ? (
+                                    <div className="flex flex-col items-center text-emerald-600">
+                                        <FileCheck size={24} />
+                                        <span className="text-[10px] mt-1 font-medium truncate max-w-full px-2">{residencyCert}</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Upload size={24} className={`${errors.includes('residencyCert') ? 'text-red-300' : 'text-slate-300'} mb-1`} />
+                                        <p className={`text-[10px] text-center ${errors.includes('residencyCert') ? 'text-red-400' : 'text-slate-400'}`}>Upload Certificate</p>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Government ID */}
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">Scanned Government ID <span className="text-red-500">*</span></label>
+                            <div className={`border-2 border-dashed ${errors.includes('govIdFile') ? 'border-red-500 bg-red-50' : 'border-slate-200 bg-slate-50'} rounded-lg p-4 flex flex-col items-center justify-center group hover:bg-slate-100 cursor-pointer relative shadow-inner transition-all h-32`}>
+                                <input type="file" onChange={(e) => { if(e.target.files?.[0]) { setGovIdFile(e.target.files[0].name); setErrors(prev => prev.filter(err => err !== 'govIdFile')); } }} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                {govIdFile ? (
+                                    <div className="flex flex-col items-center text-emerald-600">
+                                        <FileCheck size={24} />
+                                        <span className="text-[10px] mt-1 font-medium truncate max-w-full px-2">{govIdFile}</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Upload size={24} className={`${errors.includes('govIdFile') ? 'text-red-300' : 'text-slate-300'} mb-1`} />
+                                        <p className={`text-[10px] text-center ${errors.includes('govIdFile') ? 'text-red-400' : 'text-slate-400'}`}>Upload Scanned ID</p>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-6">
+                        <button onClick={() => setStep(1)} className="px-8 py-3 text-slate-400 font-normal uppercase tracking-widest text-[10px] hover:text-slate-600 transition-colors">Back</button>
+                        <button onClick={() => validateStep2() && setStep(3)} className="px-10 py-3 bg-[#1e419c] text-white rounded-lg font-normal uppercase tracking-widest text-[10px] shadow-lg hover:opacity-90 transition-all">Continue to Photo Capture</button>
+                    </div>
                 </div>
              </div>
         )}
