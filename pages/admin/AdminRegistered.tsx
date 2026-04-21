@@ -8,7 +8,8 @@ import {
   CheckCircle, XCircle, Clock, Archive, Search, 
   FileText, X, MapPin, Phone, Mail, Edit2, Save,
   Calendar, UserCheck, AlertCircle, Info, Upload,
-  ArrowLeft, ArrowRight, User as UserIcon, Heart, Banknote, HelpCircle, UserPlus, Eye, Download, File, UserMinus, RefreshCw, ZoomIn, ZoomOut, ChevronDown, Filter, ArrowUpDown, ArrowUp, ArrowDown, HelpCircle as QuestionMark, Globe, MapPinned, ShieldCheck, Fingerprint, Activity, ShieldAlert, Database, CloudOff, Stethoscope, UserCircle, Briefcase, Home, Layers, ClipboardList
+  ArrowLeft, ArrowRight, User as UserIcon, Heart, Banknote, HelpCircle, UserPlus, Eye, Download, File, UserMinus, RefreshCw, ZoomIn, ZoomOut, ChevronDown, Filter, ArrowUpDown, ArrowUp, ArrowDown, HelpCircle as QuestionMark, Globe, MapPinned, ShieldCheck, Fingerprint, Activity, ShieldAlert, Database, CloudOff, Stethoscope, UserCircle, Briefcase, Home, Layers, ClipboardList,
+  MoreHorizontal, Check, Trash2
 } from 'lucide-react';
 
 const calculateAge = (birthDate: string): number => {
@@ -41,7 +42,7 @@ const METRO_MANILA_LOCATIONS: Record<string, { districts: string[], barangays: R
 export const AdminRegistered: React.FC = () => {
   const { tab } = useParams<{ tab: string }>();
   const navigate = useNavigate();
-  const { applications, updateApplicationStatus, updateApplicationData, syncApplications, syncError, actionError, setActionError, isLiveMode, registryRecords, fetchExternalRegistry, addApplication, users } = useApp();
+  const { applications, updateApplicationStatus, updateApplicationData, syncApplications, syncError, actionError, setActionError, isLiveMode, registryRecords, fetchExternalRegistry, addApplication, users, deleteApplication } = useApp();
   
   // State
   const [isSyncing, setIsSyncing] = useState(false);
@@ -54,6 +55,7 @@ export const AdminRegistered: React.FC = () => {
     tab === 'disapproved' ? ApplicationStatus.REJECTED : 'all'
   );
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   
   const ALL_BARANGAYS = useMemo(() => {
     return [
@@ -64,8 +66,10 @@ export const AdminRegistered: React.FC = () => {
   
   // Review & Confirmation State
   const [viewingApp, setViewingApp] = useState<Application | null>(null);
+  const [isInitialEdit, setIsInitialEdit] = useState(false);
   const [rejectingApp, setRejectingApp] = useState<Application | null>(null);
   const [confirmingApproveApp, setConfirmingApproveApp] = useState<Application | null>(null);
+  const [deletingApp, setDeletingApp] = useState<Application | null>(null);
   const [rejectionRemarks, setRejectionRemarks] = useState('');
 
   // Sync logic
@@ -105,6 +109,16 @@ export const AdminRegistered: React.FC = () => {
     }
   };
 
+  const handleDeleteConfirm = async () => {
+    if (deletingApp) {
+      await deleteApplication(deletingApp.id);
+      setDeletingApp(null);
+      setOpenDropdownId(null);
+      setSuccessMessage('Application record permanently removed.');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    }
+  };
+
   const counts = useMemo(() => {
     const regs = applications.filter(a => String(a.type || '').toLowerCase() === 'registration');
     return {
@@ -134,6 +148,14 @@ export const AdminRegistered: React.FC = () => {
         String(a.id || '').toLowerCase().includes(query)
       );
     }
+
+    // Sort by latest first
+    list.sort((a, b) => {
+      const dateA = new Date(a.date || 0).getTime();
+      const dateB = new Date(b.date || 0).getTime();
+      return dateB - dateA;
+    });
+
     return list;
   }, [applications, statusFilter, searchTerm, barangayFilter, tab]);
 
@@ -241,13 +263,14 @@ export const AdminRegistered: React.FC = () => {
       {viewingApp && (
         <ApplicationReviewModal 
           app={viewingApp} 
-          onClose={() => setViewingApp(null)}
+          onClose={() => { setViewingApp(null); setIsInitialEdit(false); }}
           setViewingApp={setViewingApp}
           setRejectingApp={setRejectingApp}
           setConfirmingApproveApp={setConfirmingApproveApp}
           setSuccessMessage={setSuccessMessage}
           rejectionRemarks={rejectionRemarks}
           setRejectionRemarks={setRejectionRemarks}
+          initialEditMode={isInitialEdit}
         />
       )}
 
@@ -423,28 +446,106 @@ export const AdminRegistered: React.FC = () => {
                                             )}
                                         </span>
                                     </td>
-                                    <td className="p-8 text-right">
-                                        <div className="flex justify-end gap-3">
-                                            {app.status === ApplicationStatus.PENDING ? (
+                                    <td className="p-8 text-right relative">
+                                        <div className="flex flex-col items-end gap-1">
+                                            <div className="flex justify-end">
+                                                <button 
+                                                    onClick={() => setOpenDropdownId(openDropdownId === app.id ? null : app.id)}
+                                                    className="p-3 hover:bg-slate-100 rounded-xl transition-all text-slate-400"
+                                                >
+                                                    <MoreHorizontal size={20} />
+                                                </button>
+                                                
+                                            {openDropdownId === app.id && (
                                                 <>
-                                                    <button onClick={() => setViewingApp(app)} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-medium text-[10px] uppercase tracking-widest hover:bg-[#1e419c] hover:text-white transition-all flex items-center gap-2 shadow-sm">
-                                                        <Eye size={14} /> Review
-                                                    </button>
-                                                    <button onClick={() => setRejectingApp(app)} className="px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white shadow-xl shadow-red-600/10 transition-all active:scale-95">
-                                                        <XCircle size={18} />
-                                                    </button>
-                                                    <button onClick={() => setConfirmingApproveApp(app)} className="px-4 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 shadow-xl shadow-emerald-600/20 transition-all active:scale-95">
-                                                        <CheckCircle size={18} />
-                                                    </button>
+                                                    <div className="fixed inset-0 z-10" onClick={() => setOpenDropdownId(null)} />
+                                                    <div className={`absolute right-8 ${filteredApps.indexOf(app) >= filteredApps.length - 2 && filteredApps.length > 2 ? 'bottom-full origin-bottom mb-2' : 'top-16 origin-top'} w-64 bg-white rounded-[1.5rem] shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-slate-100 z-20 py-4 flex flex-col items-start overflow-hidden animate-scale-up`}>
+                                                        <button 
+                                                            onClick={() => { setViewingApp(app); setOpenDropdownId(null); }}
+                                                            className="w-full flex items-center gap-5 px-8 py-3.5 hover:bg-slate-50 transition-colors text-slate-600 group"
+                                                        >
+                                                            <Eye size={18} className="text-slate-400" />
+                                                            <span className="text-[11px] font-bold uppercase tracking-widest">View Profile</span>
+                                                        </button>
+                                                        
+                                                        {app.status === ApplicationStatus.PENDING && (
+                                                            <>
+                                                                <button 
+                                                                    onClick={() => { setIsInitialEdit(true); setViewingApp(app); setOpenDropdownId(null); }}
+                                                                    className="w-full flex items-center gap-5 px-8 py-3.5 hover:bg-slate-50 transition-colors text-slate-600 group"
+                                                                >
+                                                                    <Edit2 size={18} className="text-slate-400" />
+                                                                    <span className="text-[11px] font-bold uppercase tracking-widest">Edit Profile</span>
+                                                                </button>
+                                                                
+                                                                <div className="w-full h-[1px] bg-slate-50 my-1" />
+                                                                
+                                                                <button 
+                                                                    onClick={() => { setConfirmingApproveApp(app); setOpenDropdownId(null); }}
+                                                                    className="w-full flex items-center gap-5 px-8 py-3.5 hover:bg-emerald-50 transition-colors text-emerald-600 group"
+                                                                >
+                                                                    <Check size={18} className="text-emerald-500" />
+                                                                    <span className="text-[11px] font-bold uppercase tracking-widest">Approve</span>
+                                                                </button>
+                                                                
+                                                                <button 
+                                                                    onClick={() => { setRejectingApp(app); setOpenDropdownId(null); }}
+                                                                    className="w-full flex items-center gap-5 px-8 py-3.5 hover:bg-red-50 transition-colors text-red-600 group"
+                                                                >
+                                                                    <X size={18} className="text-red-500" />
+                                                                    <span className="text-[11px] font-bold uppercase tracking-widest">Disapprove</span>
+                                                                </button>
+                                                                
+                                                                <div className="w-full h-[1px] bg-slate-50 my-1" />
+                                                                
+                                                                <button 
+                                                                    onClick={() => { setDeletingApp(app); setOpenDropdownId(null); }}
+                                                                    className="w-full flex items-center gap-5 px-8 py-3.5 hover:bg-red-50 transition-colors text-red-600 group"
+                                                                >
+                                                                    <Trash2 size={18} className="text-red-500" />
+                                                                    <span className="text-[11px] font-bold uppercase tracking-widest">Delete Record</span>
+                                                                </button>
+                                                            </>
+                                                        )}
+
+                                                        {app.status === ApplicationStatus.REJECTED && (
+                                                            <>
+                                                                <div className="w-full h-[1px] bg-slate-50 my-1" />
+                                                                <button 
+                                                                    onClick={() => { updateApplicationStatus(app.id, ApplicationStatus.PENDING); setOpenDropdownId(null); setSuccessMessage('Application restored to pending state.'); setTimeout(() => setSuccessMessage(null), 3000); }}
+                                                                    className="w-full flex items-center gap-5 px-8 py-3.5 hover:bg-blue-50 transition-colors text-blue-600 group"
+                                                                >
+                                                                    <RefreshCw size={18} className="text-blue-400" />
+                                                                    <span className="text-[11px] font-bold uppercase tracking-widest">Move to Pending</span>
+                                                                </button>
+
+                                                                <button 
+                                                                    onClick={() => { setDeletingApp(app); setOpenDropdownId(null); }}
+                                                                    className="w-full flex items-center gap-5 px-8 py-3.5 hover:bg-red-50 transition-colors text-red-600 group"
+                                                                >
+                                                                    <Trash2 size={18} className="text-red-500" />
+                                                                    <span className="text-[11px] font-bold uppercase tracking-widest">Delete Record</span>
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </>
-                                            ) : (
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => setViewingApp(app)} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 font-medium text-[10px] uppercase tracking-widest rounded-xl hover:bg-[#1e419c] hover:text-white transition-all flex items-center gap-2 shadow-sm">
-                                                        <Eye size={14} /> Details
-                                                    </button>
-                                                    <button onClick={() => updateApplicationStatus(app.id, ApplicationStatus.PENDING)} className="px-6 py-3 bg-white border border-slate-200 text-slate-400 font-medium text-[10px] uppercase tracking-widest rounded-xl hover:bg-slate-50 hover:text-primary-600 transition-all shadow-sm">
-                                                        Restore
-                                                    </button>
+                                            )}
+                                            </div>
+                                            
+                                            {app.status !== ApplicationStatus.PENDING && (
+                                                <div className="flex flex-col items-end pr-3">
+                                                    {app.status === ApplicationStatus.REJECTED && (
+                                                        <button 
+                                                            onClick={() => setViewingApp(app)}
+                                                            className="text-[10px] font-bold text-red-600 uppercase tracking-widest hover:underline"
+                                                        >
+                                                            View Remarks
+                                                        </button>
+                                                    )}
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                                                        Reviewed: {app.date}
+                                                    </span>
                                                 </div>
                                             )}
                                         </div>
@@ -453,6 +554,38 @@ export const AdminRegistered: React.FC = () => {
                             ))}
                         </tbody>
                     </table>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deletingApp && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-scale-up">
+                        <div className="p-8 pb-4 text-center">
+                            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Trash2 size={40} className="text-red-500" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-slate-800 mb-2">Delete Record?</h3>
+                            <p className="text-slate-500 text-sm leading-relaxed">
+                                Are you sure you want to delete <span className="font-bold text-slate-700">{deletingApp.userName}</span>'s record? 
+                                This action is permanent and cannot be reversed.
+                            </p>
+                        </div>
+                        <div className="p-8 pt-6 flex flex-col gap-3">
+                            <button 
+                                onClick={handleDeleteConfirm}
+                                className="w-full py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-bold text-sm tracking-widest uppercase transition-all shadow-lg shadow-red-100"
+                            >
+                                Delete Permanently
+                            </button>
+                            <button 
+                                onClick={() => setDeletingApp(null)}
+                                className="w-full py-4 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-2xl font-bold text-sm tracking-widest uppercase transition-all"
+                            >
+                                Nevermind
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

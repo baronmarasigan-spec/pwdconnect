@@ -17,6 +17,7 @@ interface ApplicationReviewModalProps {
   setSuccessMessage: React.Dispatch<React.SetStateAction<string | null>>;
   rejectionRemarks: string;
   setRejectionRemarks: React.Dispatch<React.SetStateAction<string>>;
+  initialEditMode?: boolean;
 }
 
 const calculateAge = (birthDate: string): number => {
@@ -39,10 +40,11 @@ export const ApplicationReviewModal: React.FC<ApplicationReviewModalProps> = ({
   setConfirmingApproveApp,
   setSuccessMessage,
   rejectionRemarks,
-  setRejectionRemarks
+  setRejectionRemarks,
+  initialEditMode = false
 }) => {
     const { applications, updateApplicationStatus, updateApplicationData, actionError, registryRecords, users } = useApp();
-    const [isEditMode, setIsEditMode] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(initialEditMode);
     const [editData, setEditData] = useState({
         first_name: app.formData?.firstName || '',
         last_name: app.formData?.lastName || '',

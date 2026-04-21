@@ -60,6 +60,8 @@ interface AppContextType {
   updateComplaintStatus: (id: string, status: 'Open' | 'Resolved', response?: string) => void;
   verifyIdentity: (id: string) => RegistryRecord | undefined;
   issueIdCard: (appId: string) => void;
+  deleteApplication: (id: string) => Promise<void>;
+  deleteMasterlistRecord: (id: string) => Promise<void>;
   updateUser: (userId: string, updates: Partial<User>) => void;
   syncApplications: () => Promise<void>;
   fetchMasterlist: () => Promise<void>;
@@ -73,6 +75,7 @@ interface AppContextType {
   addPoster: (poster: Omit<PosterItem, 'id' | 'createdAt'>) => Promise<void>;
   updatePoster: (id: string, updates: Partial<PosterItem>) => Promise<void>;
   deletePoster: (id: string) => Promise<void>;
+  moveRecordToPending: (recordId: string) => Promise<void>;
   events: EventItem[];
   posters: PosterItem[];
   syncError: string | null;
@@ -135,9 +138,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .filter(u => u.pwdIdNumber)
       .map(u => ({
         ...u,
+        userId: u.id,
         id: u.pwdIdNumber,
         type: 'PWD',
-        status: 'Active'
+        status: 'Active',
+        dateApplied: u.dateApplied || u.registrationDate || '2024-01-01'
       }));
       
     const registeredRegistry = INITIAL_REGISTRY_RECORDS
@@ -146,7 +151,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ...r,
         pwdIdNumber: r.id.startsWith('GGG-') ? r.id : undefined,
         name: `${r.firstName} ${r.lastName}`.trim(),
-        status: 'Active'
+        status: 'Active',
+        dateApplied: '2024-01-01'
       }));
       
     return [...registeredUsers, ...registeredRegistry];
@@ -568,6 +574,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: ApplicationStatus.ISSUED } : a));
   };
 
+  const deleteApplication = async (id: string) => {
+    setApplications(prev => prev.filter(a => a.id !== id));
+  };
+
+  const deleteMasterlistRecord = async (id: string) => {
+    const record = masterlistRecords.find(r => r.id === id || r.pwdIdNumber === id);
+    if (record) {
+      const userId = record.userId || record.id;
+      setUsers(prev => prev.filter(u => u.id !== userId));
+    }
+    setMasterlistRecords(prev => prev.filter(r => r.id !== id && r.pwdIdNumber !== id));
+  };
+
   const updateUser = (userId: string, updates: Partial<User>) => {
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
     if (currentUser?.id === userId) {
@@ -671,14 +690,62 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [currentUser, syncApplications, fetchMasterlist]);
 
+  const moveRecordToPending = async (recordId: string) => {
+    const record = masterlistRecords.find(r => r.id === recordId || r.pwdIdNumber === recordId);
+    if (!record) return;
+
+    // Remove from masterlist records
+    setMasterlistRecords(prev => prev.filter(r => r.id !== recordId && r.pwdIdNumber !== recordId));
+
+    // Update associated user if any
+    const userId = record.userId || record.id;
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, pwdIdNumber: undefined } : u));
+
+    // Check if there's an existing registration application
+    const existingApp = applications.find(a => 
+      (a.userId === userId || a.id === userId) && 
+      (a.type === ApplicationType.REGISTRATION || a.type === ApplicationType.ID_NEW)
+    );
+
+    if (existingApp) {
+      // Move existing application back to pending
+      setApplications(prev => prev.map(a => 
+        a.id === existingApp.id ? { ...a, status: ApplicationStatus.PENDING, updatedAt: new Date().toISOString() } : a
+      ));
+    } else {
+      // Create a new pending application if none exists
+      const newApp: Application = {
+        id: `app_rv_${Date.now()}`,
+        userId: userId,
+        userName: record.name || `${record.firstName} ${record.lastName}`,
+        type: ApplicationType.REGISTRATION,
+        status: ApplicationStatus.PENDING,
+        date: new Date().toISOString().split('T')[0],
+        description: 'Transferred from Masterlist for re-evaluation',
+        formData: {
+          ...record,
+          firstName: record.firstName,
+          lastName: record.lastName,
+          middleName: record.middleName,
+          birthDate: record.birthDate,
+          barangay: record.barangay,
+          isWalkIn: record.isWalkIn || false
+        }
+      };
+      setApplications(prev => [newApp, ...prev]);
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       currentUser, login, logout, users, applications, complaints,
       registryRecords, masterlistRecords, cashGrants, addApplication, updateApplicationStatus,
       updateApplicationData,
-      addComplaint, updateComplaintStatus, verifyIdentity, issueIdCard, updateUser,
+      addComplaint, updateComplaintStatus, verifyIdentity, issueIdCard, 
+      deleteApplication, deleteMasterlistRecord, updateUser,
       syncApplications, fetchMasterlist, fetchExternalRegistry, generateCashGrantList, updateCashGrantStatus, getNextPwdIdNumber, 
       addEvent, updateEvent, deleteEvent, addPoster, updatePoster, deletePoster,
+      moveRecordToPending,
       events, posters,
       syncError, 
       actionError, setActionError, registryError, isLiveMode
