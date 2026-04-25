@@ -46,10 +46,46 @@ export const ApplicationReviewModal: React.FC<ApplicationReviewModalProps> = ({
     const { applications, updateApplicationStatus, updateApplicationData, actionError, registryRecords, users } = useApp();
     const [isEditMode, setIsEditMode] = useState(initialEditMode);
     const [editData, setEditData] = useState({
-        first_name: app.formData?.firstName || '',
-        last_name: app.formData?.lastName || '',
-        email: app.formData?.email || '',
-        contact_number: app.formData?.contactNumber || '',
+        firstName: app.formData?.firstName || '',
+        lastName: app.formData?.lastName || '',
+        middleName: app.formData?.middleName || '',
+        suffix: app.formData?.suffix || '',
+        birthDate: app.formData?.birthDate || '',
+        gender: app.formData?.gender || app.formData?.sex || '',
+        civilStatus: app.formData?.civilStatus || '',
+        citizenship: app.formData?.citizenship || 'Filipino',
+        typeOfDisability: app.formData?.typeOfDisability || app.formData?.disabilityType || '',
+        causeOfDisability: app.formData?.causeOfDisability || '',
+        streetAddress: app.formData?.streetAddress || app.formData?.address || '',
+        barangay: app.formData?.barangay || '',
+        cityMunicipality: app.formData?.cityMunicipality || '',
+        province: app.formData?.province || '',
+        region: app.formData?.region || '',
+        mobileNumber: app.formData?.mobileNumber || app.formData?.contactNumber || '',
+        landline: app.formData?.landline || '',
+        emailAddress: app.formData?.emailAddress || app.formData?.email || '',
+        emergencyContactPerson: app.formData?.emergencyContactPerson || '',
+        emergencyContactNumber: app.formData?.emergencyContactNumber || '',
+        relationship: app.formData?.relationship || '',
+        highestEducation: app.formData?.highestEducation || '',
+        employmentStatus: app.formData?.employmentStatus || '',
+        employmentType: app.formData?.employmentType || '',
+        employmentCategory: app.formData?.employmentCategory || '',
+        occupation: app.formData?.occupation || '',
+        physicianName: app.formData?.physicianName || '',
+        physicianLicense: app.formData?.physicianLicense || '',
+        orgName: app.formData?.orgName || '',
+        orgContactPerson: app.formData?.orgContactPerson || '',
+        orgAddress: app.formData?.orgAddress || '',
+        orgContactNo: app.formData?.orgContactNo || '',
+        sssNumber: app.formData?.sssNumber || '',
+        gsisNumber: app.formData?.gsisNumber || '',
+        pagIbigNumber: app.formData?.pagIbigNumber || '',
+        psnNumber: app.formData?.psnNumber || '',
+        philHealthNumber: app.formData?.philHealthNumber || '',
+        fatherName: app.formData?.fatherName || '',
+        motherName: app.formData?.motherName || '',
+        guardianName: app.formData?.guardianName || '',
         username: app.formData?.username || '',
         password: app.formData?.password || ''
     });
@@ -198,14 +234,10 @@ startxref
             setIsEditMode(false);
             setViewingApp(prev => prev ? { 
                 ...prev, 
-                userName: `${editData.first_name} ${editData.last_name}`,
+                userName: `${editData.firstName} ${editData.lastName}`,
                 formData: prev.formData ? { 
                     ...prev.formData, 
-                    ...editData, 
-                    firstName: editData.first_name, 
-                    lastName: editData.last_name,
-                    username: editData.username,
-                    password: editData.password
+                    ...editData
                 } : undefined
             } : null);
         }
@@ -337,9 +369,11 @@ startxref
                         <div className="lg:col-span-2">
                             <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Full Legal Name</label>
                             {isEditMode ? (
-                                <div className="flex gap-2">
-                                    <input className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 font-medium uppercase outline-none" value={editData.first_name} onChange={(e) => setEditData({...editData, first_name: e.target.value})} placeholder="First Name" />
-                                    <input className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 font-medium uppercase outline-none" value={editData.last_name} onChange={(e) => setEditData({...editData, last_name: e.target.value})} placeholder="Last Name" />
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                                    <input className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.firstName} onChange={(e) => setEditData({...editData, firstName: e.target.value})} placeholder="First Name" title="First Name" />
+                                    <input className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.middleName} onChange={(e) => setEditData({...editData, middleName: e.target.value})} placeholder="Middle Name" title="Middle Name" />
+                                    <input className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.lastName} onChange={(e) => setEditData({...editData, lastName: e.target.value})} placeholder="Last Name" title="Last Name" />
+                                    <input className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.suffix} onChange={(e) => setEditData({...editData, suffix: e.target.value})} placeholder="Suffix" title="Suffix (e.g. Jr, Sr)" />
                                 </div>
                             ) : (
                                 <p className="font-medium text-slate-900 text-lg uppercase leading-tight">{app.userName}</p>
@@ -347,15 +381,37 @@ startxref
                         </div>
                         <div>
                             <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Birthdate</label>
-                            <p className="font-medium text-slate-900">{app.formData?.birthDate || '---'}</p>
+                            {isEditMode ? (
+                                <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium outline-none" value={editData.birthDate} onChange={(e) => setEditData({...editData, birthDate: e.target.value})} />
+                            ) : (
+                                <p className="font-medium text-slate-900">{app.formData?.birthDate || '---'}</p>
+                            )}
                         </div>
                         <div>
                             <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Gender</label>
-                            <p className="font-medium text-slate-900 uppercase">{app.formData?.gender || '---'}</p>
+                            {isEditMode ? (
+                                <select className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.gender} onChange={(e) => setEditData({...editData, gender: e.target.value})}>
+                                    <option value="">Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            ) : (
+                                <p className="font-medium text-slate-900 uppercase">{app.formData?.gender || '---'}</p>
+                            )}
                         </div>
                         <div>
                             <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Civil Status</label>
-                            <p className="font-medium text-slate-900 uppercase">{app.formData?.civilStatus || '---'}</p>
+                            {isEditMode ? (
+                                <select className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.civilStatus} onChange={(e) => setEditData({...editData, civilStatus: e.target.value})}>
+                                    <option value="">Select Status</option>
+                                    <option value="Single">Single</option>
+                                    <option value="Married">Married</option>
+                                    <option value="Widowed">Widowed</option>
+                                    <option value="Separated">Separated</option>
+                                </select>
+                            ) : (
+                                <p className="font-medium text-slate-900 uppercase">{app.formData?.civilStatus || '---'}</p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -400,11 +456,28 @@ startxref
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Type of Disability</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.typeOfDisability || app.formData?.disabilityType || '---'}</p>
+                        {isEditMode ? (
+                            <select className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.typeOfDisability} onChange={(e) => setEditData({...editData, typeOfDisability: e.target.value})}>
+                                <option value="">Select Disability</option>
+                                <option value="Visual">Visual</option>
+                                <option value="Hearing">Hearing</option>
+                                <option value="Speech">Speech</option>
+                                <option value="Physical">Physical</option>
+                                <option value="Mental">Mental</option>
+                                <option value="Intellectual">Intellectual</option>
+                                <option value="Psychosocial">Psychosocial</option>
+                            </select>
+                        ) : (
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.typeOfDisability || app.formData?.disabilityType || '---'}</p>
+                        )}
                     </div>
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Cause of Disability</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.causeOfDisability || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.causeOfDisability} onChange={(e) => setEditData({...editData, causeOfDisability: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.causeOfDisability || '---'}</p>
+                        )}
                     </div>
                 </div>
               </div>
@@ -416,23 +489,43 @@ startxref
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2">
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Street Address</label>
-                        <p className="font-medium text-slate-900 text-sm uppercase leading-relaxed">{app.formData?.streetAddress || app.formData?.address || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.streetAddress} onChange={(e) => setEditData({...editData, streetAddress: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 text-sm uppercase leading-relaxed">{app.formData?.streetAddress || app.formData?.address || '---'}</p>
+                        )}
                     </div>
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Barangay</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.barangay || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.barangay} onChange={(e) => setEditData({...editData, barangay: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.barangay || '---'}</p>
+                        )}
                     </div>
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">City / Municipality</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.cityMunicipality || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.cityMunicipality} onChange={(e) => setEditData({...editData, cityMunicipality: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.cityMunicipality || '---'}</p>
+                        )}
                     </div>
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Province</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.province || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.province} onChange={(e) => setEditData({...editData, province: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.province || '---'}</p>
+                        )}
                     </div>
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Region</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.region || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.region} onChange={(e) => setEditData({...editData, region: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.region || '---'}</p>
+                        )}
                     </div>
                 </div>
               </div>
@@ -444,15 +537,27 @@ startxref
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Landline</label>
-                        <p className="font-medium text-slate-900">{app.formData?.landline || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium outline-none" value={editData.landline} onChange={(e) => setEditData({...editData, landline: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900">{app.formData?.landline || '---'}</p>
+                        )}
                     </div>
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Mobile Number</label>
-                        <p className="font-medium text-[#1e419c] text-lg font-mono tracking-wider">{app.formData?.mobileNumber || app.formData?.contactNumber || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-[#1e419c] font-bold outline-none" value={editData.mobileNumber} onChange={(e) => setEditData({...editData, mobileNumber: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-[#1e419c] text-lg font-mono tracking-wider">{app.formData?.mobileNumber || app.formData?.contactNumber || '---'}</p>
+                        )}
                     </div>
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Email Address</label>
-                        <p className="font-medium text-slate-900 lowercase">{app.formData?.emailAddress || app.formData?.email || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium outline-none" value={editData.emailAddress} onChange={(e) => setEditData({...editData, emailAddress: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 lowercase">{app.formData?.emailAddress || app.formData?.email || '---'}</p>
+                        )}
                     </div>
                 </div>
               </div>
@@ -464,15 +569,27 @@ startxref
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Contact Person</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.emergencyContactPerson || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.emergencyContactPerson} onChange={(e) => setEditData({...editData, emergencyContactPerson: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.emergencyContactPerson || '---'}</p>
+                        )}
                     </div>
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Contact Number</label>
-                        <p className="font-medium text-slate-900">{app.formData?.emergencyContactNumber || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium outline-none" value={editData.emergencyContactNumber} onChange={(e) => setEditData({...editData, emergencyContactNumber: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900">{app.formData?.emergencyContactNumber || '---'}</p>
+                        )}
                     </div>
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Relationship</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.relationship || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.relationship} onChange={(e) => setEditData({...editData, relationship: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.relationship || '---'}</p>
+                        )}
                     </div>
                 </div>
               </div>
@@ -484,28 +601,61 @@ startxref
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Educational Attainment</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.highestEducation || '---'}</p>
+                        {isEditMode ? (
+                            <select className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.highestEducation} onChange={(e) => setEditData({...editData, highestEducation: e.target.value})}>
+                                <option value="">Select Education</option>
+                                <option value="Elementary">Elementary</option>
+                                <option value="High School">High School</option>
+                                <option value="College">College</option>
+                                <option value="Post Graduate">Post Graduate</option>
+                                <option value="None">None</option>
+                            </select>
+                        ) : (
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.highestEducation || '---'}</p>
+                        )}
                     </div>
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Employment Status</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.employmentStatus || '---'}</p>
+                        {isEditMode ? (
+                            <select className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.employmentStatus} onChange={(e) => setEditData({...editData, employmentStatus: e.target.value})}>
+                                <option value="">Select Status</option>
+                                <option value="Employed">Employed</option>
+                                <option value="Unemployed">Unemployed</option>
+                                <option value="Self-Employed">Self-Employed</option>
+                                <option value="Student">Student</option>
+                            </select>
+                        ) : (
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.employmentStatus || '---'}</p>
+                        )}
                     </div>
-                    {app.formData?.employmentStatus === 'Employed' && (
+                    {(editData.employmentStatus === 'Employed' || (!isEditMode && app.formData?.employmentStatus === 'Employed')) && (
                         <>
                             <div>
                                 <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Employment Type</label>
-                                <p className="font-medium text-slate-900 uppercase">{app.formData?.employmentType || '---'}</p>
+                                {isEditMode ? (
+                                    <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.employmentType} onChange={(e) => setEditData({...editData, employmentType: e.target.value})} />
+                                ) : (
+                                    <p className="font-medium text-slate-900 uppercase">{app.formData?.employmentType || '---'}</p>
+                                )}
                             </div>
                             <div>
                                 <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Employment Category</label>
-                                <p className="font-medium text-slate-900 uppercase">{app.formData?.employmentCategory || '---'}</p>
+                                {isEditMode ? (
+                                    <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.employmentCategory} onChange={(e) => setEditData({...editData, employmentCategory: e.target.value})} />
+                                ) : (
+                                    <p className="font-medium text-slate-900 uppercase">{app.formData?.employmentCategory || '---'}</p>
+                                )}
                             </div>
                         </>
                     )}
-                    {app.formData?.employmentStatus !== 'Unemployed' && (
+                    {(editData.employmentStatus !== 'Unemployed' || (!isEditMode && app.formData?.employmentStatus !== 'Unemployed')) && (
                         <div>
                             <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Occupation</label>
-                            <p className="font-medium text-slate-900 uppercase">{app.formData?.occupation || '---'}</p>
+                            {isEditMode ? (
+                                <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.occupation} onChange={(e) => setEditData({...editData, occupation: e.target.value})} />
+                            ) : (
+                                <p className="font-medium text-slate-900 uppercase">{app.formData?.occupation || '---'}</p>
+                            )}
                         </div>
                     )}
                 </div>
@@ -518,16 +668,24 @@ startxref
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Name of Certifying Physician</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.physicianName || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.physicianName} onChange={(e) => setEditData({...editData, physicianName: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.physicianName || '---'}</p>
+                        )}
                     </div>
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">License No.</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.physicianLicense || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.physicianLicense} onChange={(e) => setEditData({...editData, physicianLicense: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.physicianLicense || '---'}</p>
+                        )}
                     </div>
                 </div>
               </div>
 
-              {app.formData?.employmentStatus === 'Employed' && (
+              {(editData.employmentStatus === 'Employed' || (!isEditMode && app.formData?.employmentStatus === 'Employed')) && (
                 <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm space-y-6">
                     <h4 className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50 pb-3 flex items-center gap-2">
                         <UserIcon size={14} className="text-orange-500" /> Organization Information
@@ -535,19 +693,35 @@ startxref
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
                             <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Organization Name</label>
-                            <p className="font-medium text-slate-900 uppercase">{app.formData?.orgName || '---'}</p>
+                            {isEditMode ? (
+                                <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.orgName} onChange={(e) => setEditData({...editData, orgName: e.target.value})} />
+                            ) : (
+                                <p className="font-medium text-slate-900 uppercase">{app.formData?.orgName || '---'}</p>
+                            )}
                         </div>
                         <div>
                             <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Contact Person</label>
-                            <p className="font-medium text-slate-900 uppercase">{app.formData?.orgContactPerson || '---'}</p>
+                            {isEditMode ? (
+                                <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.orgContactPerson} onChange={(e) => setEditData({...editData, orgContactPerson: e.target.value})} />
+                            ) : (
+                                <p className="font-medium text-slate-900 uppercase">{app.formData?.orgContactPerson || '---'}</p>
+                            )}
                         </div>
                         <div className="md:col-span-2">
                             <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Organization Address</label>
-                            <p className="font-medium text-slate-900 uppercase">{app.formData?.orgAddress || '---'}</p>
+                            {isEditMode ? (
+                                <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.orgAddress} onChange={(e) => setEditData({...editData, orgAddress: e.target.value})} />
+                            ) : (
+                                <p className="font-medium text-slate-900 uppercase">{app.formData?.orgAddress || '---'}</p>
+                            )}
                         </div>
                         <div>
                             <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Contact No.</label>
-                            <p className="font-medium text-slate-900">{app.formData?.orgContactNo || '---'}</p>
+                            {isEditMode ? (
+                                <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium outline-none" value={editData.orgContactNo} onChange={(e) => setEditData({...editData, orgContactNo: e.target.value})} />
+                            ) : (
+                                <p className="font-medium text-slate-900">{app.formData?.orgContactNo || '---'}</p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -558,39 +732,46 @@ startxref
                     <FileText size={14} className="text-slate-600" /> Government IDs
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {app.formData?.sssNumber && (
-                        <div>
-                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">SSS Number</label>
-                            <p className="font-medium text-slate-900 font-mono">{app.formData?.sssNumber}</p>
-                        </div>
-                    )}
-                    {app.formData?.gsisNumber && (
-                        <div>
-                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">GSIS Number</label>
-                            <p className="font-medium text-slate-900 font-mono">{app.formData?.gsisNumber}</p>
-                        </div>
-                    )}
-                    {app.formData?.pagIbigNumber && (
-                        <div>
-                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Pag-IBIG Number</label>
-                            <p className="font-medium text-slate-900 font-mono">{app.formData?.pagIbigNumber}</p>
-                        </div>
-                    )}
-                    {app.formData?.psnNumber && (
-                        <div>
-                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">PSN Number</label>
-                            <p className="font-medium text-slate-900 font-mono">{app.formData?.psnNumber}</p>
-                        </div>
-                    )}
-                    {app.formData?.philHealthNumber && (
-                        <div>
-                            <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">PhilHealth Number</label>
-                            <p className="font-medium text-slate-900 font-mono">{app.formData?.philHealthNumber}</p>
-                        </div>
-                    )}
-                    {!app.formData?.sssNumber && !app.formData?.gsisNumber && !app.formData?.pagIbigNumber && !app.formData?.psnNumber && !app.formData?.philHealthNumber && (
-                        <p className="text-sm text-slate-400 italic col-span-full">No Government IDs provided</p>
-                    )}
+                    <div>
+                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">SSS Number</label>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-mono outline-none" value={editData.sssNumber} onChange={(e) => setEditData({...editData, sssNumber: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 font-mono">{app.formData?.sssNumber || '---'}</p>
+                        )}
+                    </div>
+                    <div>
+                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">GSIS Number</label>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-mono outline-none" value={editData.gsisNumber} onChange={(e) => setEditData({...editData, gsisNumber: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 font-mono">{app.formData?.gsisNumber || '---'}</p>
+                        )}
+                    </div>
+                    <div>
+                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Pag-IBIG Number</label>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-mono outline-none" value={editData.pagIbigNumber} onChange={(e) => setEditData({...editData, pagIbigNumber: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 font-mono">{app.formData?.pagIbigNumber || '---'}</p>
+                        )}
+                    </div>
+                    <div>
+                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">PSN Number</label>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-mono outline-none" value={editData.psnNumber} onChange={(e) => setEditData({...editData, psnNumber: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 font-mono">{app.formData?.psnNumber || '---'}</p>
+                        )}
+                    </div>
+                    <div>
+                        <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">PhilHealth Number</label>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-mono outline-none" value={editData.philHealthNumber} onChange={(e) => setEditData({...editData, philHealthNumber: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 font-mono">{app.formData?.philHealthNumber || '---'}</p>
+                        )}
+                    </div>
                 </div>
               </div>
 
@@ -601,15 +782,27 @@ startxref
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Father’s Name</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.fatherName || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.fatherName} onChange={(e) => setEditData({...editData, fatherName: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.fatherName || '---'}</p>
+                        )}
                     </div>
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Mother’s Name</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.motherName || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.motherName} onChange={(e) => setEditData({...editData, motherName: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.motherName || '---'}</p>
+                        )}
                     </div>
                     <div>
                         <label className="text-[10px] text-slate-400 font-medium uppercase block mb-1">Guardian’s Name</label>
-                        <p className="font-medium text-slate-900 uppercase">{app.formData?.guardianName || '---'}</p>
+                        {isEditMode ? (
+                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium uppercase outline-none" value={editData.guardianName} onChange={(e) => setEditData({...editData, guardianName: e.target.value})} />
+                        ) : (
+                            <p className="font-medium text-slate-900 uppercase">{app.formData?.guardianName || '---'}</p>
+                        )}
                     </div>
                 </div>
               </div>

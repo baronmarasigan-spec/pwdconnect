@@ -708,9 +708,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
 
     if (existingApp) {
-      // Move existing application back to pending
+      // Move existing application back to pending and ensure it is a REGISTRATION type
+      // so it appears in PWD Registration Management
       setApplications(prev => prev.map(a => 
-        a.id === existingApp.id ? { ...a, status: ApplicationStatus.PENDING, updatedAt: new Date().toISOString() } : a
+        a.id === existingApp.id ? { ...a, type: ApplicationType.REGISTRATION, status: ApplicationStatus.PENDING, updatedAt: new Date().toISOString() } : a
       ));
     } else {
       // Create a new pending application if none exists

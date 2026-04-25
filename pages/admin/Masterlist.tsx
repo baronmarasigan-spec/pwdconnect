@@ -63,7 +63,7 @@ export const Masterlist: React.FC = () => {
       setTimeout(() => setSuccessMessage(null), 3000);
     } else if (type === 'pending') {
       moveRecordToPending(record.id);
-      setSuccessMessage(`${record.name || record.fullName} has been moved back to pending approvals.`);
+      setSuccessMessage(`${record.name || record.fullName} has been moved back to PWD Registration Management as a pending citizen.`);
       setTimeout(() => setSuccessMessage(null), 3000);
     } else if (type === 'delete') {
       setConfirmingDeleteRecord(record);
